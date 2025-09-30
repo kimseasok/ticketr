@@ -43,6 +43,20 @@ trait HasRoles
         return $this->roles()->where('name', $role)->exists();
     }
 
+    public function hasPermissionTo(string $permission): bool
+    {
+        return $this->permissions()->contains(fn ($perm) => $perm->name === $permission);
+    }
+
+    public function can($ability, $arguments = []): bool
+    {
+        if (is_string($ability) && $this->hasPermissionTo($ability)) {
+            return true;
+        }
+
+        return parent::can($ability, $arguments);
+    }
+
     protected function getDefaultGuardName(): string
     {
         return property_exists($this, 'guard_name') ? $this->guard_name : config('auth.defaults.guard', 'web');

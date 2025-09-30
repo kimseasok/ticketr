@@ -17,15 +17,32 @@ return new class extends Migration {
             $table->foreignId('assigned_to')->nullable()->constrained('users')->nullOnDelete();
             $table->string('subject');
             $table->text('description')->nullable();
-            $table->enum('status', ['open', 'pending', 'resolved', 'closed'])->default('open');
+            $table->enum('status', ['open', 'pending', 'resolved', 'closed', 'archived'])->default('open');
             $table->enum('priority', ['low', 'normal', 'high', 'urgent'])->default('normal');
-            $table->string('reference')->unique();
+            $table->enum('channel', ['email', 'web', 'chat', 'phone'])->default('email');
+            $table->string('reference');
             $table->json('metadata')->nullable();
+            $table->timestamp('status_changed_at')->nullable();
+            $table->timestamp('first_response_due_at')->nullable();
+            $table->timestamp('resolution_due_at')->nullable();
+            $table->timestamp('first_responded_at')->nullable();
+            $table->timestamp('resolved_at')->nullable();
+            $table->timestamp('closed_at')->nullable();
+            $table->timestamp('archived_at')->nullable();
+            $table->timestamp('last_customer_reply_at')->nullable();
+            $table->timestamp('last_agent_reply_at')->nullable();
+            $table->timestamp('last_activity_at')->nullable();
             $table->timestamps();
+            $table->softDeletes();
 
             $table->index('tenant_id');
             $table->index('brand_id');
             $table->index('contact_id');
+            $table->index('status');
+            $table->index('priority');
+            $table->index('resolution_due_at');
+            $table->index('archived_at');
+            $table->unique(['tenant_id', 'reference']);
         });
     }
 

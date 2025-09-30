@@ -9,6 +9,8 @@ use App\Modules\Helpdesk\Models\KnowledgeBaseArticle;
 use App\Modules\Helpdesk\Models\KnowledgeBaseCategory;
 use App\Modules\Helpdesk\Models\Tenant;
 use App\Modules\Helpdesk\Models\Ticket;
+use App\Modules\Helpdesk\Models\TicketCategory;
+use App\Modules\Helpdesk\Models\TicketTag;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -93,7 +95,7 @@ class DemoDataSeeder extends Seeder
             'status' => KnowledgeBaseArticle::STATUS_PUBLISHED,
         ]);
 
-        Ticket::firstOrCreate([
+        $ticket = Ticket::firstOrCreate([
             'tenant_id' => $tenant->id,
             'reference' => 'ACME-1000',
         ], [
@@ -106,6 +108,30 @@ class DemoDataSeeder extends Seeder
             'description' => 'A seeded demo ticket for the helpdesk.',
             'status' => Ticket::STATUS_OPEN,
             'priority' => 'high',
+            'channel' => 'email',
+            'first_response_due_at' => now()->addHours(2),
+            'resolution_due_at' => now()->addHours(6),
+            'status_changed_at' => now(),
+            'last_activity_at' => now(),
         ]);
+
+        $supportCategory = TicketCategory::firstOrCreate([
+            'tenant_id' => $tenant->id,
+            'slug' => 'support',
+        ], [
+            'name' => 'Support',
+            'color' => '#2563EB',
+        ]);
+
+        $vipTag = TicketTag::firstOrCreate([
+            'tenant_id' => $tenant->id,
+            'slug' => 'vip',
+        ], [
+            'name' => 'VIP',
+            'color' => '#F97316',
+        ]);
+
+        $ticket->syncCategories([$supportCategory->id], $admin->id);
+        $ticket->syncTags([$vipTag->id], $agent->id);
     }
 }

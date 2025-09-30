@@ -1,61 +1,105 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Ticketr Helpdesk Foundation
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Ticketr is a multi-tenant helpdesk platform built on Laravel 12 and Filament 3. This phase introduces hardened ticket storage, taxonomy, and policy layers so every tenant receives isolated lifecycle tracking across channels.
 
-## About Laravel
+## Getting Started
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+1. **Clone & install dependencies**
+   ```bash
+   composer install
+   npm install
+   ```
+2. **Configure the application**
+   ```bash
+   cp .env.example .env
+   php artisan key:generate
+   ```
+3. **Run database migrations** (order matters for tenancy isolation)
+   ```bash
+   php artisan migrate
+   ```
+   The core sequence is:
+   1. `0000_01_01_000100_create_tenants_table`
+   2. `2024_01_01_000140_create_tickets_table`
+   3. `2024_01_01_000210_create_ticket_categories_table`
+   4. `2024_01_01_000220_create_ticket_tags_table`
+   5. `2024_01_01_000230_create_ticket_category_ticket_table`
+   6. `2024_01_01_000240_create_ticket_tag_ticket_table`
+   7. Supporting tables (`audit_logs`, etc.)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+4. **Seed demo data** (tenants, roles, ticket examples)
+   ```bash
+   php artisan db:seed --class=RoleSeeder
+   php artisan db:seed --class=TenantSeeder
+   php artisan db:seed --class=DemoDataSeeder
+   ```
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+5. **Run the dev stack**
+   ```bash
+   php artisan serve
+   npm run dev
+   ```
 
-## Learning Laravel
+## Multi-tenant context
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+Requests resolve tenant and brand scopes from either authenticated users or explicit headers:
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+- `TENANT_CONTEXT_HEADER` (default `X-Tenant`)
+- `BRAND_CONTEXT_HEADER` (default `X-Brand`)
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+When calling APIs or running background jobs, always provide these headers so global scopes filter records correctly.
 
-## Laravel Sponsors
+## API usage
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+Authentication uses the standard web guard. Issue a session or `actingAs` token, then call the endpoints:
 
-### Premium Partners
+```bash
+curl -X POST http://localhost/api/tickets \
+  -H "X-Tenant: 1" \
+  -H "X-Brand: 1" \
+  -H "Accept: application/json" \
+  -b cookie.txt \
+  -d '{
+    "brand_id": 1,
+    "contact_id": 1,
+    "company_id": 1,
+    "subject": "Printer down",
+    "priority": "urgent",
+    "channel": "web",
+    "category_ids": [1],
+    "tag_ids": [1]
+  }'
+```
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+See [`OPENAPI.yaml`](OPENAPI.yaml) for request/response schemas and examples.
 
-## Contributing
+## Filament admin
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Access the Filament panel at `/admin`. Ticket resources include SLA-aware fields, taxonomy pickers, and respect tenant/brand scopes automatically. Use the seeded credentials (e.g., `admin@acme.test` / `password`).
 
-## Code of Conduct
+## Auditing & observability
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Ticket create, update, archive, and delete actions emit structured JSON logs (`ticket.audit`) and persist audit rows with non-sensitive metadata. SLA timestamps, lifecycle events, and taxonomy updates all participate in the audit trail.
 
-## Security Vulnerabilities
+## Testing
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Focused test groups are provided per issue deliverable:
 
-## License
+```bash
+php artisan test --filter A1-DB-01
+php artisan test --filter A1-DB-02
+php artisan test --filter A1-MD-01
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Running `php artisan test` executes the full suite, including API, policy, and Filament coverage.
+
+## Environment reference
+
+New environment keys:
+
+- `TENANT_CONTEXT_HEADER` – header used to resolve the active tenant for scoped queries.
+- `BRAND_CONTEXT_HEADER` – header used to resolve the active brand for scoped queries.
+
+## Change management
+
+Refer to [`CHANGELOG.md`](CHANGELOG.md) for a concise list of additions and behavioral changes made in this phase.

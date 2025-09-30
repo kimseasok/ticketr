@@ -9,6 +9,7 @@ use App\Modules\Helpdesk\Models\Contact;
 use App\Modules\Helpdesk\Models\Tenant;
 use App\Modules\Helpdesk\Models\Ticket;
 use App\Policies\TicketPolicy;
+use App\Support\Tenancy\TenantContext;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\PermissionRegistrar;
@@ -18,17 +19,27 @@ class PolicyAccessTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_role_based_access_controls_are_enforced(): void
+    protected function setUp(): void
     {
+        parent::setUp();
         $this->seed(RoleSeeder::class);
         app(PermissionRegistrar::class)->forgetCachedPermissions();
+    }
 
+    /**
+     * @group A1-MD-01
+     */
+    public function test_role_based_access_controls_are_enforced(): void
+    {
         $tenant = Tenant::factory()->create();
         $brand = Brand::factory()->for($tenant)->create();
         $otherBrand = Brand::factory()->for($tenant)->create();
         $company = Company::factory()->forBrand($brand)->create();
         $contact = Contact::factory()->forCompany($company)->create();
         $ticket = Ticket::factory()->forContact($contact)->create();
+
+        app(TenantContext::class)->setTenantId($tenant->id);
+        app(TenantContext::class)->setBrandId($brand->id);
 
         $admin = User::factory()->create([
             'tenant_id' => $tenant->id,
@@ -41,6 +52,8 @@ class PolicyAccessTest extends TestCase
             'brand_id' => $brand->id,
         ]);
         $agent->assignRole('Agent');
+
+        $this->assertTrue($agent->can('tickets.manage'));
 
         $agentOtherBrand = User::factory()->create([
             'tenant_id' => $tenant->id,
