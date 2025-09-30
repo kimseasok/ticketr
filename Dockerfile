@@ -2,6 +2,11 @@
 
 FROM composer:2 AS composer
 WORKDIR /var/www/html
+# Install intl extension for Composer stage so dependency resolution succeeds
+RUN apk add --no-cache icu-data-full icu-libs \
+    && apk add --no-cache --virtual .build-deps $PHPIZE_DEPS icu-dev \
+    && docker-php-ext-install intl \
+    && apk del .build-deps
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --no-scripts --no-progress --prefer-dist --no-interaction
 COPY . .
@@ -26,9 +31,10 @@ RUN apt-get update \
         libpng-dev \
         libonig-dev \
         libxml2-dev \
+        libicu-dev \
         libzip-dev \
         supervisor \
-    && docker-php-ext-install pdo_mysql bcmath pcntl \
+    && docker-php-ext-install pdo_mysql bcmath pcntl intl \
     && pecl install redis \
     && docker-php-ext-enable redis \
     && rm -rf /var/lib/apt/lists/*
