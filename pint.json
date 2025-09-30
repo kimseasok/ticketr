@@ -1,0 +1,12 @@
+{
+    "$schema": "https://laravel.com/schema/pint.json",
+    "preset": "psr12",
+    "rules": {
+        "array_syntax": {
+            "syntax": "short"
+        },
+        "ordered_imports": {
+            "sort_algorithm": "alpha"
+        }
+    }
+}
