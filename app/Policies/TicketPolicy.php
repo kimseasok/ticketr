@@ -9,13 +9,17 @@ class TicketPolicy extends BaseTenantPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $this->isAdmin($user) || $this->isAgent($user) || $this->isViewer($user);
+        return $this->isAdmin($user) || $user->can('tickets.view');
     }
 
     public function view(User $user, Ticket $ticket): bool
     {
         if ($this->isAdmin($user)) {
             return true;
+        }
+
+        if (! $user->can('tickets.view')) {
+            return false;
         }
 
         if (! $this->sharesTenant($user, $ticket->tenant_id)) {
@@ -31,7 +35,7 @@ class TicketPolicy extends BaseTenantPolicy
 
     public function create(User $user): bool
     {
-        return $this->isAdmin($user) || $this->isAgent($user);
+        return ($this->isAdmin($user) || $this->isAgent($user)) && $user->can('tickets.manage');
     }
 
     public function update(User $user, Ticket $ticket): bool
@@ -41,6 +45,7 @@ class TicketPolicy extends BaseTenantPolicy
         }
 
         return $this->isAgent($user)
+            && $user->can('tickets.manage')
             && $this->sharesTenant($user, $ticket->tenant_id)
             && $this->sharesBrand($user, $ticket->brand_id);
     }

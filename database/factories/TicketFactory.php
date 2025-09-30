@@ -29,7 +29,15 @@ class TicketFactory extends Factory
             'description' => $this->faker->paragraph,
             'status' => Ticket::STATUS_OPEN,
             'priority' => 'normal',
+            'channel' => $this->faker->randomElement(['email', 'web', 'chat', 'phone']),
             'reference' => strtoupper(Str::random(10)),
+            'metadata' => [
+                'sentiment' => $this->faker->randomElement(['positive', 'neutral', 'negative']),
+            ],
+            'status_changed_at' => now(),
+            'first_response_due_at' => now()->addHours(4),
+            'resolution_due_at' => now()->addHours(24),
+            'last_activity_at' => now(),
         ];
     }
 
@@ -62,6 +70,14 @@ class TicketFactory extends Factory
     {
         return $this->state(fn () => [
             'created_by' => $user->id,
+        ]);
+    }
+
+    public function resolved(): self
+    {
+        return $this->state(fn () => [
+            'status' => Ticket::STATUS_RESOLVED,
+            'resolved_at' => now(),
         ]);
     }
 }

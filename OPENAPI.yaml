@@ -1,0 +1,293 @@
+openapi: 3.1.0
+info:
+  title: Ticketr API
+  version: 1.0.0
+  description: >-
+    Core ticket endpoints for the Ticketr helpdesk. All requests must include
+    tenant and brand headers to guarantee scoped access.
+servers:
+  - url: http://localhost
+paths:
+  /api/tickets:
+    get:
+      summary: List tickets
+      tags: [Tickets]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+      responses:
+        '200':
+          description: Paginated ticket collection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketCollection'
+    post:
+      summary: Create a ticket
+      tags: [Tickets]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketRequest'
+            examples:
+              create-ticket:
+                value:
+                  brand_id: 1
+                  contact_id: 42
+                  company_id: 11
+                  subject: Checkout fails for VIP customer
+                  description: Customer cannot complete payment.
+                  priority: urgent
+                  channel: web
+                  category_ids: [5]
+                  tag_ids: [2, 7]
+      responses:
+        '201':
+          description: Ticket created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketResponse'
+  /api/tickets/{ticket}:
+    get:
+      summary: Retrieve a ticket
+      tags: [Tickets]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+        - $ref: '#/components/parameters/TicketId'
+      responses:
+        '200':
+          description: Ticket details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketResponse'
+    put:
+      summary: Update a ticket
+      tags: [Tickets]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+        - $ref: '#/components/parameters/TicketId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketRequest'
+      responses:
+        '200':
+          description: Ticket updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketResponse'
+    delete:
+      summary: Archive/delete a ticket
+      tags: [Tickets]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+        - $ref: '#/components/parameters/TicketId'
+      responses:
+        '202':
+          description: Ticket archived (soft deleted)
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: laravel_session
+  parameters:
+    TenantHeader:
+      name: X-Tenant
+      in: header
+      required: true
+      schema:
+        type: integer
+      description: Active tenant identifier.
+    BrandHeader:
+      name: X-Brand
+      in: header
+      required: true
+      schema:
+        type: integer
+      description: Active brand identifier.
+    TicketId:
+      name: ticket
+      in: path
+      required: true
+      schema:
+        type: integer
+  schemas:
+    TicketCollection:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Ticket'
+        links:
+          type: object
+        meta:
+          type: object
+    TicketResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Ticket'
+    TicketRequest:
+      type: object
+      properties:
+        brand_id:
+          type: integer
+        contact_id:
+          type: integer
+        company_id:
+          type: integer
+        subject:
+          type: string
+        description:
+          type: string
+        priority:
+          type: string
+          enum: [low, normal, high, urgent]
+        channel:
+          type: string
+          enum: [email, web, chat, phone]
+        status:
+          type: string
+          enum: [open, pending, resolved, closed, archived]
+        reference:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+        category_ids:
+          type: array
+          items:
+            type: integer
+        tag_ids:
+          type: array
+          items:
+            type: integer
+      required: [subject, priority]
+    Ticket:
+      type: object
+      properties:
+        id:
+          type: integer
+        tenant_id:
+          type: integer
+        brand_id:
+          type: integer
+        contact_id:
+          type: integer
+        company_id:
+          type: integer
+        created_by:
+          type: integer
+        assigned_to:
+          type: integer
+        subject:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+        priority:
+          type: string
+        channel:
+          type: string
+        reference:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+        status_changed_at:
+          type: string
+          format: date-time
+        first_response_due_at:
+          type: string
+          format: date-time
+        resolution_due_at:
+          type: string
+          format: date-time
+        first_responded_at:
+          type: string
+          format: date-time
+        resolved_at:
+          type: string
+          format: date-time
+        closed_at:
+          type: string
+          format: date-time
+        archived_at:
+          type: string
+          format: date-time
+        last_customer_reply_at:
+          type: string
+          format: date-time
+        last_agent_reply_at:
+          type: string
+          format: date-time
+        last_activity_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        deleted_at:
+          type: string
+          format: date-time
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/TicketCategory'
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/TicketTag'
+    TicketCategory:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        color:
+          type: string
+        is_default:
+          type: boolean
+    TicketTag:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        color:
+          type: string
