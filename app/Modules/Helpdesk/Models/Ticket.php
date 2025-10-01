@@ -22,7 +22,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class Ticket extends Model
@@ -173,6 +176,13 @@ class Ticket extends Model
         return $this->morphMany(Attachment::class, 'attachable');
     }
 
+    public function watcherParticipants(): HasMany
+    {
+        return $this->hasMany(TicketParticipant::class)
+            ->where('role', 'watcher')
+            ->where('participant_type', 'user');
+    }
+
     public function scopeForBrand(Builder $builder, int $brandId): Builder
     {
         return $builder->where($builder->qualifyColumn('brand_id'), $brandId);
@@ -231,6 +241,98 @@ class Ticket extends Model
             ->all();
 
         $this->tags()->sync($this->preparePivotData($validIds, $userId));
+    }
+
+    /**
+     * @param  array<int,int>  $watcherIds
+     */
+    public function syncWatchers(array $watcherIds, int $actorId): void
+    {
+        $watcherIds = Collection::make($watcherIds)
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        DB::transaction(function () use ($watcherIds, $actorId): void {
+            $existing = TicketParticipant::query()
+                ->where('tenant_id', $this->tenant_id)
+                ->where('ticket_id', $this->id)
+                ->where('participant_type', 'user')
+                ->where('role', 'watcher')
+                ->pluck('participant_id')
+                ->filter()
+                ->map(fn ($id) => (int) $id)
+                ->values();
+
+            $validWatchers = User::query()
+                ->where('tenant_id', $this->tenant_id)
+                ->when($this->brand_id !== null, function ($query): void {
+                    $query->where(function ($query): void {
+                        $query->whereNull('brand_id')
+                            ->orWhere('brand_id', $this->brand_id);
+                    });
+                })
+                ->whereIn('id', $watcherIds)
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->values();
+
+            $toDelete = $existing->diff($validWatchers);
+            if ($toDelete->isNotEmpty()) {
+                TicketParticipant::query()
+                    ->where('tenant_id', $this->tenant_id)
+                    ->where('ticket_id', $this->id)
+                    ->where('participant_type', 'user')
+                    ->where('role', 'watcher')
+                    ->whereIn('participant_id', $toDelete)
+                    ->delete();
+            }
+
+            foreach ($validWatchers as $watcherId) {
+                TicketParticipant::query()->updateOrCreate([
+                    'tenant_id' => $this->tenant_id,
+                    'ticket_id' => $this->id,
+                    'participant_type' => 'user',
+                    'participant_id' => $watcherId,
+                ], [
+                    'brand_id' => $this->brand_id,
+                    'role' => 'watcher',
+                    'visibility' => 'internal',
+                ]);
+            }
+
+            $this->recordWatcherAudit($existing->all(), $validWatchers->all(), $actorId);
+        });
+    }
+
+    private function recordWatcherAudit(array $previous, array $current, int $actorId): void
+    {
+        if ($previous === $current) {
+            return;
+        }
+
+        AuditLog::create([
+            'tenant_id' => $this->tenant_id,
+            'brand_id' => $this->brand_id,
+            'user_id' => $actorId,
+            'action' => 'ticket.watchers.synced',
+            'auditable_type' => self::class,
+            'auditable_id' => $this->id,
+            'old_values' => ['watchers' => $previous ?: []],
+            'new_values' => ['watchers' => $current ?: []],
+            'metadata' => [
+                'reference' => $this->reference,
+            ],
+        ]);
+
+        Log::channel('stack')->info('ticket.watchers_synced', [
+            'ticket_id' => $this->id,
+            'tenant_id' => $this->tenant_id,
+            'brand_id' => $this->brand_id,
+            'actor_id' => $actorId,
+            'watchers' => $current,
+        ]);
     }
 
     public function safeMetadata(): array

@@ -34,6 +34,8 @@ class StoreTicketRequest extends FormRequest
             'company_id' => ['nullable', 'integer', 'exists:companies,id'],
             'created_by' => ['nullable', 'integer', 'exists:users,id'],
             'assigned_to' => ['nullable', 'integer', 'exists:users,id'],
+            'watcher_ids' => ['sometimes', 'array'],
+            'watcher_ids.*' => ['integer', 'exists:users,id'],
             'subject' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'status' => ['nullable', $statusRule],

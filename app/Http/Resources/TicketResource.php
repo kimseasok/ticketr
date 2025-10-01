@@ -45,9 +45,16 @@ class TicketResource extends JsonResource
             'tags' => TicketTagResource::collection($this->whenLoaded('tags')),
             'status_definition' => new TicketStatusResource($this->whenLoaded('statusDefinition')),
             'priority_definition' => new TicketPriorityResource($this->whenLoaded('priorityDefinition')),
+            'watchers' => $this->whenLoaded('watcherParticipants', function () {
+                return $this->watcherParticipants->map(function ($participant) {
+                    return [
+                        'user_id' => $participant->participant_id,
+                        'last_seen_at' => optional($participant->last_seen_at)->toIso8601String(),
+                        'is_muted' => (bool) $participant->is_muted,
+                    ];
+                })->all();
+            }, []),
             'sla' => $this->safeMetadata()['sla'] ?? null,
         ];
     }
 }
-use App\Http\Resources\TicketPriorityResource;
-use App\Http\Resources\TicketStatusResource;

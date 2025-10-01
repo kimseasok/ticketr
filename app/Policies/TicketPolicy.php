@@ -54,4 +54,45 @@ class TicketPolicy extends BaseTenantPolicy
     {
         return $this->update($user, $ticket);
     }
+
+    public function assign(User $user, Ticket|string|null $ticket = null): bool
+    {
+        if (! $user->can('tickets.assign')) {
+            return false;
+        }
+
+        if ($this->isAdmin($user)) {
+            if ($ticket instanceof Ticket) {
+                return $this->sharesTenant($user, $ticket->tenant_id);
+            }
+
+            return true;
+        }
+
+        if (! $this->isAgent($user)) {
+            return false;
+        }
+
+        if (! $ticket instanceof Ticket) {
+            return true;
+        }
+
+        return $this->sharesTenant($user, $ticket->tenant_id)
+            && $this->sharesBrand($user, $ticket->brand_id);
+    }
+
+    public function manageWatchers(User $user, Ticket $ticket): bool
+    {
+        if (! $user->can('tickets.watchers.manage')) {
+            return false;
+        }
+
+        if ($this->isAdmin($user)) {
+            return $this->sharesTenant($user, $ticket->tenant_id);
+        }
+
+        return $this->isAgent($user)
+            && $this->sharesTenant($user, $ticket->tenant_id)
+            && $this->sharesBrand($user, $ticket->brand_id);
+    }
 }

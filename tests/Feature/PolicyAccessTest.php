@@ -80,5 +80,15 @@ class PolicyAccessTest extends TestCase
 
         $this->assertTrue($policy->view($viewer, $ticket));
         $this->assertFalse($policy->update($viewer, $ticket));
+
+        $this->assertTrue($policy->assign($admin, $ticket));
+        $this->assertTrue($policy->assign($agent, $ticket));
+        $this->assertFalse($policy->assign($agentOtherBrand, $ticket));
+        $this->assertFalse($policy->assign($viewer, $ticket));
+
+        $this->assertTrue($policy->manageWatchers($admin, $ticket));
+        $this->assertTrue($policy->manageWatchers($agent, $ticket));
+        $this->assertFalse($policy->manageWatchers($agentOtherBrand, $ticket));
+        $this->assertFalse($policy->manageWatchers($viewer, $ticket));
     }
 }
