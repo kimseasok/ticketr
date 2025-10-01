@@ -5,6 +5,8 @@ namespace App\Modules\Helpdesk\Filament\Resources;
 use App\Modules\Helpdesk\Filament\Resources\TicketResource\Pages;
 use App\Modules\Helpdesk\Models\Ticket;
 use App\Modules\Helpdesk\Models\TicketCategory;
+use App\Modules\Helpdesk\Models\TicketPriority;
+use App\Modules\Helpdesk\Models\TicketStatus;
 use App\Modules\Helpdesk\Models\TicketTag;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -48,21 +50,14 @@ class TicketResource extends Resource
                 ->maxLength(255),
             Forms\Components\Textarea::make('description'),
             Forms\Components\Select::make('status')
-                ->options([
-                    Ticket::STATUS_OPEN => 'Open',
-                    Ticket::STATUS_PENDING => 'Pending',
-                    Ticket::STATUS_RESOLVED => 'Resolved',
-                    Ticket::STATUS_CLOSED => 'Closed',
-                    Ticket::STATUS_ARCHIVED => 'Archived',
-                ])->default(Ticket::STATUS_OPEN)
+                ->label('Status')
+                ->options(fn () => TicketStatus::query()->orderBy('sort_order')->pluck('name', 'slug')->all())
+                ->default(fn () => TicketStatus::query()->where('is_default', true)->orderBy('sort_order')->value('slug') ?? Ticket::STATUS_OPEN)
                 ->required(),
             Forms\Components\Select::make('priority')
-                ->options([
-                    'low' => 'Low',
-                    'normal' => 'Normal',
-                    'high' => 'High',
-                    'urgent' => 'Urgent',
-                ])->default('normal')
+                ->label('Priority')
+                ->options(fn () => TicketPriority::query()->orderBy('sort_order')->pluck('name', 'slug')->all())
+                ->default(fn () => TicketPriority::query()->where('is_default', true)->orderBy('sort_order')->value('slug') ?? 'normal')
                 ->required(),
             Forms\Components\Select::make('channel')
                 ->options([
@@ -107,8 +102,14 @@ class TicketResource extends Resource
                 Tables\Columns\TextColumn::make('reference')->searchable(),
                 Tables\Columns\TextColumn::make('subject')->searchable(),
                 Tables\Columns\TextColumn::make('contact.name')->label('Contact')->sortable(),
-                Tables\Columns\TextColumn::make('status')->badge(),
-                Tables\Columns\TextColumn::make('priority')->badge(),
+                Tables\Columns\TextColumn::make('statusDefinition.name')
+                    ->label('Status')
+                    ->badge()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('priorityDefinition.name')
+                    ->label('Priority')
+                    ->badge()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('channel')->badge(),
                 Tables\Columns\TextColumn::make('resolution_due_at')->dateTime()->sortable(),
                 Tables\Columns\TextColumn::make('last_activity_at')->dateTime()->sortable(),
@@ -116,20 +117,11 @@ class TicketResource extends Resource
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
-                    ->options([
-                        Ticket::STATUS_OPEN => 'Open',
-                        Ticket::STATUS_PENDING => 'Pending',
-                        Ticket::STATUS_RESOLVED => 'Resolved',
-                        Ticket::STATUS_CLOSED => 'Closed',
-                        Ticket::STATUS_ARCHIVED => 'Archived',
-                    ]),
+                    ->label('Status')
+                    ->options(fn () => TicketStatus::query()->orderBy('sort_order')->pluck('name', 'slug')->all()),
                 Tables\Filters\SelectFilter::make('priority')
-                    ->options([
-                        'low' => 'Low',
-                        'normal' => 'Normal',
-                        'high' => 'High',
-                        'urgent' => 'Urgent',
-                    ]),
+                    ->label('Priority')
+                    ->options(fn () => TicketPriority::query()->orderBy('sort_order')->pluck('name', 'slug')->all()),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
@@ -158,7 +150,7 @@ class TicketResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $query = parent::getEloquentQuery();
+        $query = parent::getEloquentQuery()->with(['statusDefinition', 'priorityDefinition']);
 
         $user = auth()->user();
         if (! $user) {

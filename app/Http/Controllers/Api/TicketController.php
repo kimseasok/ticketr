@@ -23,7 +23,7 @@ class TicketController extends Controller
     {
         Gate::authorize('viewAny', Ticket::class);
 
-        $query = Ticket::query()->with(['contact', 'assignee', 'categories', 'tags']);
+        $query = Ticket::query()->with(['contact', 'assignee', 'categories', 'tags', 'statusDefinition', 'priorityDefinition']);
 
         if ($brandId = $this->tenantContext->getBrandId()) {
             $query->forBrand($brandId);
@@ -43,25 +43,31 @@ class TicketController extends Controller
         $payload = $request->validated();
         $payload['reference'] ??= $this->generateReference();
 
+        $this->enforceScope($payload);
+
         $ticket = Ticket::create($payload);
 
         $this->syncTaxonomy($ticket, $payload);
 
-        return (new TicketResource($ticket->fresh(['contact', 'assignee', 'categories', 'tags'])))->response()->setStatusCode(201);
+        return (new TicketResource($ticket->fresh(['contact', 'assignee', 'categories', 'tags', 'statusDefinition', 'priorityDefinition'])))->response()->setStatusCode(201);
     }
 
     public function show(Ticket $ticket): TicketResource
     {
+        $this->assertTicketAccessible($ticket);
         Gate::authorize('view', $ticket);
 
-        return new TicketResource($ticket->load(['contact', 'assignee', 'categories', 'tags']));
+        return new TicketResource($ticket->load(['contact', 'assignee', 'categories', 'tags', 'statusDefinition', 'priorityDefinition']));
     }
 
     public function update(UpdateTicketRequest $request, Ticket $ticket): TicketResource
     {
+        $this->assertTicketAccessible($ticket);
         Gate::authorize('update', $ticket);
 
         $payload = $request->validated();
+
+        $this->enforceScope($payload, $ticket);
 
         if (isset($payload['status']) && $payload['status'] === Ticket::STATUS_ARCHIVED) {
             $payload['archived_at'] = now();
@@ -71,11 +77,12 @@ class TicketController extends Controller
 
         $this->syncTaxonomy($ticket, $payload);
 
-        return new TicketResource($ticket->fresh(['contact', 'assignee', 'categories', 'tags']));
+        return new TicketResource($ticket->fresh(['contact', 'assignee', 'categories', 'tags', 'statusDefinition', 'priorityDefinition']));
     }
 
     public function destroy(Ticket $ticket): JsonResponse
     {
+        $this->assertTicketAccessible($ticket);
         Gate::authorize('delete', $ticket);
 
         $ticket->delete();
@@ -96,6 +103,50 @@ class TicketController extends Controller
 
         if (array_key_exists('tag_ids', $payload)) {
             $ticket->syncTags($payload['tag_ids'], auth()->id());
+        }
+    }
+
+    private function enforceScope(array &$payload, ?Ticket $ticket = null): void
+    {
+        $tenantId = $this->tenantContext->getTenantId();
+        $brandId = $this->tenantContext->getBrandId();
+
+        if ($tenantId !== null) {
+            if ($ticket && $ticket->tenant_id !== $tenantId) {
+                abort(403, __('You may only interact with tickets in your tenant.'));
+            }
+
+            if (isset($payload['tenant_id']) && (int) $payload['tenant_id'] !== $tenantId) {
+                abort(403, __('You may only interact with tickets in your tenant.'));
+            }
+
+            $payload['tenant_id'] = $tenantId;
+        }
+
+        if ($brandId !== null) {
+            if ($ticket && $ticket->brand_id !== null && $ticket->brand_id !== $brandId) {
+                abort(403, __('You may only interact with tickets in your brand.'));
+            }
+
+            if (isset($payload['brand_id']) && (int) $payload['brand_id'] !== $brandId) {
+                abort(403, __('You may only interact with tickets in your brand.'));
+            }
+
+            $payload['brand_id'] = $brandId;
+        }
+    }
+
+    private function assertTicketAccessible(Ticket $ticket): void
+    {
+        $tenantId = $this->tenantContext->getTenantId();
+        $brandId = $this->tenantContext->getBrandId();
+
+        if ($tenantId !== null && $ticket->tenant_id !== $tenantId) {
+            abort(404);
+        }
+
+        if ($brandId !== null && $ticket->brand_id !== null && $ticket->brand_id !== $brandId) {
+            abort(404);
         }
     }
 }
