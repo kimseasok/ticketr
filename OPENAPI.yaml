@@ -167,13 +167,13 @@ components:
           type: string
         priority:
           type: string
-          enum: [low, normal, high, urgent]
+          description: Priority slug available to the active tenant (e.g. normal, high).
         channel:
           type: string
           enum: [email, web, chat, phone]
         status:
           type: string
-          enum: [open, pending, resolved, closed, archived]
+          description: Status slug available to the active tenant (e.g. open, pending).
         reference:
           type: string
         metadata:
@@ -220,6 +220,12 @@ components:
         metadata:
           type: object
           additionalProperties: true
+        status_definition:
+          $ref: '#/components/schemas/TicketStatus'
+        priority_definition:
+          $ref: '#/components/schemas/TicketPriority'
+        sla:
+          $ref: '#/components/schemas/TicketSlaSnapshot'
         status_changed_at:
           type: string
           format: date-time
@@ -267,6 +273,62 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TicketTag'
+    TicketStatus:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        is_default:
+          type: boolean
+        first_response_minutes:
+          type: integer
+        resolution_minutes:
+          type: integer
+    TicketPriority:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        color:
+          type: string
+        is_default:
+          type: boolean
+        first_response_minutes:
+          type: integer
+        resolution_minutes:
+          type: integer
+    TicketSlaSnapshot:
+      type: object
+      properties:
+        first_response:
+          $ref: '#/components/schemas/TicketSlaMetric'
+        resolution:
+          $ref: '#/components/schemas/TicketSlaMetric'
+    TicketSlaMetric:
+      type: object
+      properties:
+        state:
+          type: string
+          enum: [pending, breached, met]
+        due_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+        breached_at:
+          type: string
+          format: date-time
     TicketCategory:
       type: object
       properties:

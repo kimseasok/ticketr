@@ -43,6 +43,11 @@ class TicketResource extends JsonResource
             'deleted_at' => optional($this->deleted_at)->toIso8601String(),
             'categories' => TicketCategoryResource::collection($this->whenLoaded('categories')),
             'tags' => TicketTagResource::collection($this->whenLoaded('tags')),
+            'status_definition' => new TicketStatusResource($this->whenLoaded('statusDefinition')),
+            'priority_definition' => new TicketPriorityResource($this->whenLoaded('priorityDefinition')),
+            'sla' => $this->safeMetadata()['sla'] ?? null,
         ];
     }
 }
+use App\Http\Resources\TicketPriorityResource;
+use App\Http\Resources\TicketStatusResource;

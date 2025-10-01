@@ -31,8 +31,10 @@ Ticketr is a multi-tenant helpdesk platform built on Laravel 12 and Filament 3. 
    ```bash
    php artisan db:seed --class=RoleSeeder
    php artisan db:seed --class=TenantSeeder
+   php artisan tickets:seed-defaults
    php artisan db:seed --class=DemoDataSeeder
    ```
+   Use `php artisan tickets:seed-defaults {tenantSlugOrId}` to reseed lifecycle defaults for a specific tenant without touching others.
 
 5. **Run the dev stack**
    ```bash
@@ -73,6 +75,8 @@ curl -X POST http://localhost/api/tickets \
 
 See [`OPENAPI.yaml`](OPENAPI.yaml) for request/response schemas and examples.
 
+Ticket responses now include `status_definition`, `priority_definition`, and an `sla` snapshot describing breach/meet states for first-response and resolution targets.
+
 ## Filament admin
 
 Access the Filament panel at `/admin`. Ticket resources include SLA-aware fields, taxonomy pickers, and respect tenant/brand scopes automatically. Use the seeded credentials (e.g., `admin@acme.test` / `password`).
@@ -80,6 +84,10 @@ Access the Filament panel at `/admin`. Ticket resources include SLA-aware fields
 ## Auditing & observability
 
 Ticket create, update, archive, and delete actions emit structured JSON logs (`ticket.audit`) and persist audit rows with non-sensitive metadata. SLA timestamps, lifecycle events, and taxonomy updates all participate in the audit trail.
+
+SLA observers also dispatch `ticket.sla.breached` and `ticket.sla.recovered` log events with tenant/brand context while redacting customer content.
+
+Lifecycle defaults (names, SLAs, transitions) live in `config/ticketing.php`; override these arrays to customize tenant bootstrap behaviour.
 
 ## Testing
 
@@ -89,6 +97,9 @@ Focused test groups are provided per issue deliverable:
 php artisan test --filter A1-DB-01
 php artisan test --filter A1-DB-02
 php artisan test --filter A1-MD-01
+php artisan test --filter A1-SD-01
+php artisan test --filter A1-OB-01
+php artisan test --filter A1-TS-01
 ```
 
 Running `php artisan test` executes the full suite, including API, policy, and Filament coverage.

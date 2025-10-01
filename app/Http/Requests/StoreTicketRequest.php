@@ -3,12 +3,30 @@
 namespace App\Http\Requests;
 
 use App\Modules\Helpdesk\Models\Ticket;
+use App\Support\Tenancy\TenantContext;
+use Illuminate\Validation\Rule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreTicketRequest extends FormRequest
 {
     public function rules(): array
     {
+        $tenantId = $this->resolveTenantId();
+
+        $statusRule = $tenantId
+            ? Rule::exists('ticket_statuses', 'slug')->where(fn ($query) => $query->where('tenant_id', $tenantId))
+            : Rule::in([
+                Ticket::STATUS_OPEN,
+                Ticket::STATUS_PENDING,
+                Ticket::STATUS_RESOLVED,
+                Ticket::STATUS_CLOSED,
+                Ticket::STATUS_ARCHIVED,
+            ]);
+
+        $priorityRule = $tenantId
+            ? Rule::exists('ticket_priorities', 'slug')->where(fn ($query) => $query->where('tenant_id', $tenantId))
+            : Rule::in(['low', 'normal', 'high', 'urgent']);
+
         return [
             'tenant_id' => ['nullable', 'integer', 'exists:tenants,id'],
             'brand_id' => ['nullable', 'integer', 'exists:brands,id'],
@@ -18,14 +36,8 @@ class StoreTicketRequest extends FormRequest
             'assigned_to' => ['nullable', 'integer', 'exists:users,id'],
             'subject' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'status' => ['nullable', 'in:'.implode(',', [
-                Ticket::STATUS_OPEN,
-                Ticket::STATUS_PENDING,
-                Ticket::STATUS_RESOLVED,
-                Ticket::STATUS_CLOSED,
-                Ticket::STATUS_ARCHIVED,
-            ])],
-            'priority' => ['required', 'in:low,normal,high,urgent'],
+            'status' => ['nullable', $statusRule],
+            'priority' => ['required', $priorityRule],
             'channel' => ['nullable', 'in:email,web,chat,phone'],
             'reference' => ['nullable', 'string', 'max:50'],
             'metadata' => ['nullable', 'array'],
@@ -41,5 +53,16 @@ class StoreTicketRequest extends FormRequest
     public function authorize(): bool
     {
         return true;
+    }
+
+    private function resolveTenantId(): ?int
+    {
+        $tenantId = $this->input('tenant_id');
+
+        if ($tenantId !== null) {
+            return (int) $tenantId;
+        }
+
+        return app(TenantContext::class)->getTenantId();
     }
 }
