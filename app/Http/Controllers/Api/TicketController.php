@@ -10,6 +10,7 @@ use App\Modules\Helpdesk\Models\Ticket;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 
@@ -23,7 +24,15 @@ class TicketController extends Controller
     {
         Gate::authorize('viewAny', Ticket::class);
 
-        $query = Ticket::query()->with(['contact', 'assignee', 'categories', 'tags', 'statusDefinition', 'priorityDefinition']);
+        $query = Ticket::query()->with([
+            'contact',
+            'assignee',
+            'categories',
+            'tags',
+            'statusDefinition',
+            'priorityDefinition',
+            'watcherParticipants',
+        ]);
 
         if ($brandId = $this->tenantContext->getBrandId()) {
             $query->forBrand($brandId);
@@ -41,6 +50,13 @@ class TicketController extends Controller
         Gate::authorize('create', Ticket::class);
 
         $payload = $request->validated();
+
+        if (array_key_exists('assigned_to', $payload)) {
+            Gate::authorize('assign', Ticket::class);
+        }
+
+        $watchers = Arr::pull($payload, 'watcher_ids', []);
+
         $payload['reference'] ??= $this->generateReference();
 
         $this->enforceScope($payload);
@@ -49,7 +65,12 @@ class TicketController extends Controller
 
         $this->syncTaxonomy($ticket, $payload);
 
-        return (new TicketResource($ticket->fresh(['contact', 'assignee', 'categories', 'tags', 'statusDefinition', 'priorityDefinition'])))->response()->setStatusCode(201);
+        if ($watchers !== []) {
+            Gate::authorize('manageWatchers', $ticket);
+            $ticket->syncWatchers($watchers, auth()->id());
+        }
+
+        return (new TicketResource($ticket->fresh(['contact', 'assignee', 'categories', 'tags', 'statusDefinition', 'priorityDefinition', 'watcherParticipants'])))->response()->setStatusCode(201);
     }
 
     public function show(Ticket $ticket): TicketResource
@@ -57,7 +78,7 @@ class TicketController extends Controller
         $this->assertTicketAccessible($ticket);
         Gate::authorize('view', $ticket);
 
-        return new TicketResource($ticket->load(['contact', 'assignee', 'categories', 'tags', 'statusDefinition', 'priorityDefinition']));
+        return new TicketResource($ticket->load(['contact', 'assignee', 'categories', 'tags', 'statusDefinition', 'priorityDefinition', 'watcherParticipants']));
     }
 
     public function update(UpdateTicketRequest $request, Ticket $ticket): TicketResource
@@ -66,6 +87,12 @@ class TicketController extends Controller
         Gate::authorize('update', $ticket);
 
         $payload = $request->validated();
+
+        if (array_key_exists('assigned_to', $payload)) {
+            Gate::authorize('assign', $ticket);
+        }
+
+        $watchers = Arr::pull($payload, 'watcher_ids', null);
 
         $this->enforceScope($payload, $ticket);
 
@@ -77,7 +104,12 @@ class TicketController extends Controller
 
         $this->syncTaxonomy($ticket, $payload);
 
-        return new TicketResource($ticket->fresh(['contact', 'assignee', 'categories', 'tags', 'statusDefinition', 'priorityDefinition']));
+        if ($watchers !== null) {
+            Gate::authorize('manageWatchers', $ticket);
+            $ticket->syncWatchers($watchers, auth()->id());
+        }
+
+        return new TicketResource($ticket->fresh(['contact', 'assignee', 'categories', 'tags', 'statusDefinition', 'priorityDefinition', 'watcherParticipants']));
     }
 
     public function destroy(Ticket $ticket): JsonResponse

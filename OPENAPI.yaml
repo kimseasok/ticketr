@@ -239,6 +239,199 @@ paths:
                 $ref: '#/components/schemas/TicketMessageResponse'
         '401':
           description: Invalid or missing channel token
+  /api/channel-adapters:
+    get:
+      summary: List channel adapters
+      tags: [Channel Adapters]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+      responses:
+        '200':
+          description: Paginated channel adapter list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChannelAdapterCollection'
+    post:
+      summary: Create a channel adapter
+      tags: [Channel Adapters]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChannelAdapterRequest'
+            examples:
+              create-adapter:
+                value:
+                  name: Default Email Gateway
+                  slug: email-gateway
+                  channel: email
+                  provider: smtp
+                  configuration:
+                    host: smtp.example.test
+                    port: 587
+      responses:
+        '201':
+          description: Channel adapter created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChannelAdapterResponse'
+  /api/channel-adapters/{channel_adapter}:
+    get:
+      summary: Show a channel adapter
+      tags: [Channel Adapters]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+        - $ref: '#/components/parameters/ChannelAdapterId'
+      responses:
+        '200':
+          description: Channel adapter details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChannelAdapterResponse'
+    put:
+      summary: Update a channel adapter
+      tags: [Channel Adapters]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+        - $ref: '#/components/parameters/ChannelAdapterId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChannelAdapterRequest'
+      responses:
+        '200':
+          description: Channel adapter updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChannelAdapterResponse'
+    delete:
+      summary: Delete a channel adapter
+      tags: [Channel Adapters]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+        - $ref: '#/components/parameters/ChannelAdapterId'
+      responses:
+        '204':
+          description: Channel adapter deleted
+  /api/ticket-macros:
+    get:
+      summary: List ticket macros
+      tags: [Ticket Macros]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+      responses:
+        '200':
+          description: Paginated macro list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketMacroCollection'
+    post:
+      summary: Create a ticket macro
+      tags: [Ticket Macros]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketMacroRequest'
+            examples:
+              create-macro:
+                value:
+                  name: Escalate to Tier 2
+                  slug: escalate-tier-2
+                  body: Escalating ticket to Tier 2.
+                  visibility: brand
+      responses:
+        '201':
+          description: Ticket macro created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketMacroResponse'
+  /api/ticket-macros/{ticket_macro}:
+    get:
+      summary: Show a ticket macro
+      tags: [Ticket Macros]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+        - $ref: '#/components/parameters/TicketMacroId'
+      responses:
+        '200':
+          description: Ticket macro details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketMacroResponse'
+    put:
+      summary: Update a ticket macro
+      tags: [Ticket Macros]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+        - $ref: '#/components/parameters/TicketMacroId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketMacroRequest'
+      responses:
+        '200':
+          description: Ticket macro updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketMacroResponse'
+    delete:
+      summary: Delete a ticket macro
+      tags: [Ticket Macros]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+        - $ref: '#/components/parameters/TicketMacroId'
+      responses:
+        '204':
+          description: Ticket macro deleted
   /api/health:
     get:
       summary: Service health snapshot
@@ -364,6 +557,18 @@ components:
       description: Active brand identifier.
     TicketId:
       name: ticket
+      in: path
+      required: true
+      schema:
+        type: integer
+    ChannelAdapterId:
+      name: channel_adapter
+      in: path
+      required: true
+      schema:
+        type: integer
+    TicketMacroId:
+      name: ticket_macro
       in: path
       required: true
       schema:
@@ -631,6 +836,12 @@ components:
         metadata:
           type: object
           additionalProperties: true
+        assigned_to:
+          type: integer
+        watcher_ids:
+          type: array
+          items:
+            type: integer
         category_ids:
           type: array
           items:
@@ -725,6 +936,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TicketTag'
+        watchers:
+          type: array
+          items:
+            $ref: '#/components/schemas/TicketWatcher'
     TicketStatus:
       type: object
       properties:
@@ -759,6 +974,170 @@ components:
           type: integer
         resolution_minutes:
           type: integer
+    TicketWatcher:
+      type: object
+      properties:
+        user_id:
+          type: integer
+        last_seen_at:
+          type: string
+          format: date-time
+        is_muted:
+          type: boolean
+    ChannelAdapter:
+      type: object
+      properties:
+        id:
+          type: integer
+        tenant_id:
+          type: integer
+        brand_id:
+          type: integer
+          nullable: true
+        name:
+          type: string
+        slug:
+          type: string
+        channel:
+          type: string
+          enum: [email, web, chat, phone]
+        provider:
+          type: string
+        configuration:
+          type: object
+          additionalProperties: true
+        metadata:
+          type: object
+          additionalProperties: true
+        is_active:
+          type: boolean
+        last_synced_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ChannelAdapterRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        channel:
+          type: string
+          enum: [email, web, chat, phone]
+        provider:
+          type: string
+        brand_id:
+          type: integer
+          nullable: true
+        configuration:
+          type: object
+          additionalProperties: true
+        metadata:
+          type: object
+          additionalProperties: true
+        is_active:
+          type: boolean
+        last_synced_at:
+          type: string
+          format: date-time
+          nullable: true
+      required: [name, slug, channel, provider]
+    ChannelAdapterCollection:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChannelAdapter'
+        links:
+          type: object
+        meta:
+          type: object
+    ChannelAdapterResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/ChannelAdapter'
+    TicketMacro:
+      type: object
+      properties:
+        id:
+          type: integer
+        tenant_id:
+          type: integer
+        brand_id:
+          type: integer
+          nullable: true
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+          nullable: true
+        body:
+          type: string
+        visibility:
+          type: string
+          enum: [tenant, brand, private]
+        metadata:
+          type: object
+          additionalProperties: true
+        is_shared:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    TicketMacroRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+          nullable: true
+        body:
+          type: string
+        visibility:
+          type: string
+          enum: [tenant, brand, private]
+        brand_id:
+          type: integer
+          nullable: true
+        metadata:
+          type: object
+          additionalProperties: true
+        is_shared:
+          type: boolean
+      required: [name, slug, body, visibility]
+    TicketMacroCollection:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TicketMacro'
+        links:
+          type: object
+        meta:
+          type: object
+    TicketMacroResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/TicketMacro'
     TicketSlaSnapshot:
       type: object
       properties:

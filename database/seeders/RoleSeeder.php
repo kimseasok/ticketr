@@ -15,12 +15,18 @@ class RoleSeeder extends Seeder
         $permissions = [
             'tickets.manage',
             'tickets.view',
+            'tickets.assign',
+            'tickets.watchers.manage',
             'ticket-messages.manage',
             'ticket-messages.view',
             'contacts.manage',
             'contacts.view',
             'knowledge-base.manage',
             'knowledge-base.view',
+            'channel-adapters.manage',
+            'channel-adapters.view',
+            'ticket-macros.manage',
+            'ticket-macros.view',
         ];
 
         foreach ($permissions as $permission) {
@@ -47,18 +53,26 @@ class RoleSeeder extends Seeder
         $agent->syncPermissions([
             'tickets.manage',
             'tickets.view',
+            'tickets.assign',
+            'tickets.watchers.manage',
             'ticket-messages.manage',
             'ticket-messages.view',
             'contacts.manage',
             'contacts.view',
             'knowledge-base.manage',
             'knowledge-base.view',
+            'channel-adapters.manage',
+            'channel-adapters.view',
+            'ticket-macros.manage',
+            'ticket-macros.view',
         ]);
         $viewer->syncPermissions([
             'tickets.view',
             'ticket-messages.view',
             'contacts.view',
             'knowledge-base.view',
+            'channel-adapters.view',
+            'ticket-macros.view',
         ]);
     }
 }

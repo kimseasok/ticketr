@@ -29,14 +29,15 @@ Ticketr is a multi-tenant helpdesk platform built on Laravel 12 and Filament 3. 
    8. `2024_01_01_000320_create_ticket_participants_table`
    9. Supporting tables (`audit_logs`, etc.)
 
-4. **Seed demo data** (tenants, roles, ticket examples)
+4. **Seed demo data** (tenants, roles, ticket adapters/macros, ticket examples)
    ```bash
    php artisan db:seed --class=RoleSeeder
    php artisan db:seed --class=TenantSeeder
    php artisan tickets:seed-defaults
+   php artisan db:seed --class=ChannelAdapterMacroSeeder
    php artisan db:seed --class=DemoDataSeeder
    ```
-   Use `php artisan tickets:seed-defaults {tenantSlugOrId}` to reseed lifecycle defaults for a specific tenant without touching others.
+   Use `php artisan tickets:seed-defaults {tenantSlugOrId}` to reseed lifecycle defaults for a specific tenant without touching others. `ChannelAdapterMacroSeeder` can also be run independently to refresh seeded adapters/macros for new tenants.
 
 5. **Run the dev stack**
    ```bash
@@ -71,13 +72,25 @@ curl -X POST http://localhost/api/tickets \
     "priority": "urgent",
     "channel": "web",
     "category_ids": [1],
-    "tag_ids": [1]
+    "tag_ids": [1],
+    "watcher_ids": [5]
   }'
 ```
 
 See [`OPENAPI.yaml`](OPENAPI.yaml) for request/response schemas and examples.
 
-Ticket responses now include `status_definition`, `priority_definition`, and an `sla` snapshot describing breach/meet states for first-response and resolution targets. Ticket message endpoints support `GET /api/tickets/{ticket}/messages` and `POST /api/tickets/{ticket}/messages` for scoped collaboration with attachment ingestion, dedupe, and participant sync. Channel adapters can deliver replies via `POST /api/tickets/{ticket}/ingest` when providing the shared `X-Channel-Token` header (see [`docs/collaboration-flows.md`](docs/collaboration-flows.md)).
+Ticket responses now include watcher state alongside `status_definition`, `priority_definition`, and SLA snapshots so clients can render assignment + follower context. Ticket message endpoints support `GET /api/tickets/{ticket}/messages` and `POST /api/tickets/{ticket}/messages` for scoped collaboration with attachment ingestion, dedupe, and participant sync. Channel adapters can deliver replies via `POST /api/tickets/{ticket}/ingest` when providing the shared `X-Channel-Token` header (see [`docs/collaboration-flows.md`](docs/collaboration-flows.md)).
+
+### Channel adapters & macros
+
+Manage seeded channel connectors and reusable reply macros via API or Filament:
+
+- `GET /api/channel-adapters` / `POST /api/channel-adapters`
+- `GET /api/channel-adapters/{id}` / `PUT /api/channel-adapters/{id}` / `DELETE /api/channel-adapters/{id}`
+- `GET /api/ticket-macros` / `POST /api/ticket-macros`
+- `GET /api/ticket-macros/{id}` / `PUT /api/ticket-macros/{id}` / `DELETE /api/ticket-macros/{id}`
+
+See the new ADR at [`docs/adr/2024-06-12-ticket-schema-and-tenancy.md`](docs/adr/2024-06-12-ticket-schema-and-tenancy.md) for schema diagrams, seeding strategy, and tenancy constraints.
 
 ## Filament admin
 

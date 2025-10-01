@@ -32,6 +32,8 @@ class UpdateTicketRequest extends FormRequest
             'contact_id' => ['sometimes', 'nullable', 'integer', 'exists:contacts,id'],
             'company_id' => ['sometimes', 'nullable', 'integer', 'exists:companies,id'],
             'assigned_to' => ['sometimes', 'nullable', 'integer', 'exists:users,id'],
+            'watcher_ids' => ['sometimes', 'array'],
+            'watcher_ids.*' => ['integer', 'exists:users,id'],
             'subject' => ['sometimes', 'string', 'max:255'],
             'description' => ['sometimes', 'nullable', 'string'],
             'status' => ['sometimes', $statusRule],

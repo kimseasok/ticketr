@@ -18,12 +18,17 @@
 - Message visibility enforcement with viewer filtering and participant sanitisation. (#27)
 - Collaboration flows ADR outlining adapter responsibilities and RBAC rules. (#29)
 - Monitoring tokens, structured log channel, and `/api/health` dependency checks for observability pipelines. (#12)
+- Channel adapter and ticket macro tables with factories, seeders, API + Filament resources, and OpenAPI coverage. (#25)
+- Ticket watcher management (policy, API, audit logging) with assignment permission mapping and JSON payloads. (#20)
+- Ticket schema & tenancy ADR documenting ERD, seeding runbooks, and watcher strategy. (#22)
 
 ### Changed
 - Ticket policy now honours Spatie permissions (`tickets.view`, `tickets.manage`).
 - Demo seeders hydrate default ticket categories/tags and sample assignments.
 - Ticket API create/update endpoints now pin tenant and brand IDs to the active context.
 - Role seeding grants granular `ticket-messages.*` permissions across Admin/Agent/Viewer roles. (#24)
+- Role seeding now provisions `tickets.assign`, `tickets.watchers.manage`, `channel-adapters.*`, and `ticket-macros.*` permissions mapped to Admin/Agent/Viewer roles. (#20, #25)
+- Ticket API responses expose watcher collections alongside SLA snapshots; README + OpenAPI document the optional `watcher_ids` payloads. (#20)
 
 ### Security
 - Tenant and brand headers are required to resolve scoped queries, preventing cross-tenant leakage.
@@ -32,3 +37,4 @@
 - Filament ticket table exposes assignment, status, and SLA bulk actions backed by the bulk action service. (#28)
 - Demo seeders hydrate brand theming defaults and monitoring tokens for observability agents. (#10, #12)
 - TOTP enrollment/confirmation routes honour tenant policies, redact secrets in audit logs, and enforce IP allowlists. (#11)
+- Watcher synchronisation enforces tenant/brand membership and records `ticket.watchers.synced` audit entries with structured logs. (#20)
