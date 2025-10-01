@@ -5,6 +5,7 @@ namespace App\Modules\Helpdesk\Models;
 use App\Models\Concerns\BelongsToTenant;
 use App\Models\User;
 use App\Modules\Helpdesk\Models\Contact;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -54,6 +55,24 @@ class TicketMessage extends Model
     public function scopeForTicket(Builder $builder, int $ticketId): Builder
     {
         return $builder->where($builder->qualifyColumn('ticket_id'), $ticketId);
+    }
+
+    public function scopeVisibleTo(Builder $builder, Authenticatable $user): Builder
+    {
+        if (method_exists($user, 'hasRole') && ($user->hasRole('Admin') || $user->hasRole('Agent'))) {
+            return $builder;
+        }
+
+        if (method_exists($user, 'hasRole') && $user->hasRole('Viewer')) {
+            return $builder->where($builder->qualifyColumn('visibility'), 'public');
+        }
+
+        return $builder->whereRaw('0 = 1');
+    }
+
+    public function scopePublicOnly(Builder $builder): Builder
+    {
+        return $builder->where($builder->qualifyColumn('visibility'), 'public');
     }
 
     public function tenant(): BelongsTo

@@ -2,14 +2,16 @@
 
 namespace App\Providers;
 
+use App\Models\User;
+use App\Modules\Helpdesk\Models\Contact;
 use App\Modules\Helpdesk\Models\KnowledgeBaseArticle;
 use App\Modules\Helpdesk\Models\Ticket;
 use App\Modules\Helpdesk\Models\TicketMessage;
-use App\Modules\Helpdesk\Models\Contact;
 use App\Policies\ContactPolicy;
 use App\Policies\KnowledgeBaseArticlePolicy;
 use App\Policies\TicketMessagePolicy;
 use App\Policies\TicketPolicy;
+use App\Policies\UserSecurityPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
 class AuthServiceProvider extends ServiceProvider
@@ -24,6 +26,7 @@ class AuthServiceProvider extends ServiceProvider
         TicketMessage::class => TicketMessagePolicy::class,
         Contact::class => ContactPolicy::class,
         KnowledgeBaseArticle::class => KnowledgeBaseArticlePolicy::class,
+        User::class => UserSecurityPolicy::class,
     ];
 
     public function boot(): void

@@ -54,6 +54,13 @@ class TicketMessagePolicyTest extends TestCase
         $viewer = User::factory()->create(['tenant_id' => $tenant->id, 'brand_id' => $brand->id]);
         $viewer->assignRole('Viewer');
 
+        $internal = $service->append($ticket, [
+            'body' => 'Internal note',
+            'author_type' => 'user',
+            'author_id' => $agent->id,
+            'visibility' => 'internal',
+        ]);
+
         $this->assertTrue(Gate::forUser($admin)->allows('viewAny', [TicketMessage::class, $ticket]));
         $this->assertTrue(Gate::forUser($admin)->allows('create', [TicketMessage::class, $ticket]));
         $this->assertTrue(Gate::forUser($admin)->allows('update', $message));
@@ -61,9 +68,11 @@ class TicketMessagePolicyTest extends TestCase
         $this->assertTrue(Gate::forUser($agent)->allows('viewAny', [TicketMessage::class, $ticket]));
         $this->assertTrue(Gate::forUser($agent)->allows('create', [TicketMessage::class, $ticket]));
         $this->assertTrue(Gate::forUser($agent)->allows('update', $message));
+        $this->assertTrue(Gate::forUser($agent)->allows('view', $internal));
 
         $this->assertTrue(Gate::forUser($viewer)->allows('viewAny', [TicketMessage::class, $ticket]));
         $this->assertFalse(Gate::forUser($viewer)->allows('create', [TicketMessage::class, $ticket]));
         $this->assertFalse(Gate::forUser($viewer)->allows('update', $message));
+        $this->assertFalse(Gate::forUser($viewer)->allows('view', $internal));
     }
 }

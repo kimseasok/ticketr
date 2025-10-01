@@ -22,8 +22,11 @@ class TicketMessagePolicy extends BaseTenantPolicy
             return true;
         }
 
-        return $this->sharesTenant($user, $ticket->tenant_id)
-            && $this->sharesBrand($user, $ticket->brand_id);
+        if (! $this->sharesTenant($user, $ticket->tenant_id) || ! $this->sharesBrand($user, $ticket->brand_id)) {
+            return false;
+        }
+
+        return true;
     }
 
     public function view(User $user, TicketMessage $message): bool
@@ -36,8 +39,19 @@ class TicketMessagePolicy extends BaseTenantPolicy
             return false;
         }
 
-        return $this->sharesTenant($user, $message->tenant_id)
-            && $this->sharesBrand($user, $message->brand_id);
+        if (! $this->sharesTenant($user, $message->tenant_id) || ! $this->sharesBrand($user, $message->brand_id)) {
+            return false;
+        }
+
+        if ($message->visibility === 'internal' && ! $this->isAgent($user)) {
+            return false;
+        }
+
+        if ($this->isViewer($user) && $message->visibility !== 'public') {
+            return false;
+        }
+
+        return true;
     }
 
     public function create(User $user, ?Ticket $ticket = null): bool

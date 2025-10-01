@@ -29,6 +29,11 @@ class KnowledgeBaseArticle extends Model
         'metadata' => 'array',
     ];
 
+    public function getRouteKeyName(): string
+    {
+        return 'slug';
+    }
+
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);

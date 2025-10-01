@@ -2,17 +2,20 @@
 
 namespace App\Modules\Helpdesk\Filament\Resources;
 
+use App\Models\User;
 use App\Modules\Helpdesk\Filament\Resources\TicketResource\Pages;
 use App\Modules\Helpdesk\Models\Ticket;
 use App\Modules\Helpdesk\Models\TicketCategory;
 use App\Modules\Helpdesk\Models\TicketPriority;
 use App\Modules\Helpdesk\Models\TicketStatus;
 use App\Modules\Helpdesk\Models\TicketTag;
+use App\Modules\Helpdesk\Services\TicketBulkActionService;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables\Table;
 use Filament\Tables;
+use Illuminate\Support\Collection;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 
@@ -128,6 +131,48 @@ class TicketResource extends Resource
                 Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([
+                Tables\Actions\BulkAction::make('assignAgent')
+                    ->label('Assign agent')
+                    ->icon('heroicon-o-user-plus')
+                    ->form([
+                        Forms\Components\Select::make('assignee_id')
+                            ->label('Agent')
+                            ->options(fn () => static::agentOptions())
+                            ->required(),
+                    ])
+                    ->action(fn (Collection $records, array $data) => static::applyBulkActions($records, [
+                        ['type' => 'assign', 'assignee_id' => (int) $data['assignee_id']],
+                    ]))
+                    ->deselectRecordsAfterCompletion()
+                    ->requiresConfirmation(),
+                Tables\Actions\BulkAction::make('updateStatus')
+                    ->label('Update status')
+                    ->icon('heroicon-o-arrow-path')
+                    ->form([
+                        Forms\Components\Select::make('status')
+                            ->label('Status')
+                            ->options(fn () => TicketStatus::query()->orderBy('sort_order')->pluck('name', 'slug')->all())
+                            ->required(),
+                    ])
+                    ->action(fn (Collection $records, array $data) => static::applyBulkActions($records, [
+                        ['type' => 'status', 'status' => $data['status']],
+                    ]))
+                    ->deselectRecordsAfterCompletion()
+                    ->requiresConfirmation(),
+                Tables\Actions\BulkAction::make('extendResolution')
+                    ->label('Extend resolution SLA')
+                    ->icon('heroicon-o-clock')
+                    ->form([
+                        Forms\Components\DateTimePicker::make('resolution_due_at')
+                            ->label('Resolution due at')
+                            ->seconds(false)
+                            ->required(),
+                    ])
+                    ->action(fn (Collection $records, array $data) => static::applyBulkActions($records, [
+                        ['type' => 'sla', 'resolution_due_at' => $data['resolution_due_at']],
+                    ]))
+                    ->deselectRecordsAfterCompletion()
+                    ->requiresConfirmation(),
                 Tables\Actions\DeleteBulkAction::make(),
             ])
             ->defaultSort('last_activity_at', 'desc');
@@ -146,6 +191,36 @@ class TicketResource extends Resource
             'view' => Pages\ViewTicket::route('/{record}'),
             'edit' => Pages\EditTicket::route('/{record}/edit'),
         ];
+    }
+
+    protected static function agentOptions(): array
+    {
+        $user = auth()->user();
+
+        if (! $user) {
+            return [];
+        }
+
+        return User::query()
+            ->where('tenant_id', $user->tenant_id)
+            ->when($user->brand_id, fn (Builder $builder) => $builder->where('brand_id', $user->brand_id))
+            ->whereHas('roles', fn ($query) => $query->where('name', 'Agent'))
+            ->orderBy('name')
+            ->pluck('name', 'id')
+            ->all();
+    }
+
+    protected static function applyBulkActions(Collection $records, array $actions): void
+    {
+        $user = auth()->user();
+
+        if (! $user) {
+            return;
+        }
+
+        /** @var TicketBulkActionService $service */
+        $service = app(TicketBulkActionService::class);
+        $service->apply($user, $records->pluck('id')->all(), $actions);
     }
 
     public static function getEloquentQuery(): Builder

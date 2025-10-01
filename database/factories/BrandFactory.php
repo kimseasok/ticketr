@@ -22,7 +22,12 @@ class BrandFactory extends Factory
             'tenant_id' => Tenant::factory(),
             'name' => $name,
             'slug' => Str::slug($name . '-' . $this->faker->unique()->randomNumber()),
-            'domain' => $this->faker->domainName,
+            'domain' => sprintf('https://%s', $this->faker->domainName()),
+            'primary_color' => $this->faker->hexColor,
+            'secondary_color' => $this->faker->hexColor,
+            'accent_color' => $this->faker->hexColor,
+            'logo_url' => $this->faker->imageUrl(width: 200, height: 60, category: 'business'),
+            'portal_domain' => sprintf('https://%s', $this->faker->domainName()),
         ];
     }
 }

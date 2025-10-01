@@ -77,15 +77,38 @@ curl -X POST http://localhost/api/tickets \
 
 See [`OPENAPI.yaml`](OPENAPI.yaml) for request/response schemas and examples.
 
-Ticket responses now include `status_definition`, `priority_definition`, and an `sla` snapshot describing breach/meet states for first-response and resolution targets. Ticket message endpoints support `GET /api/tickets/{ticket}/messages` and `POST /api/tickets/{ticket}/messages` for scoped collaboration with attachment ingestion, dedupe, and participant sync.
+Ticket responses now include `status_definition`, `priority_definition`, and an `sla` snapshot describing breach/meet states for first-response and resolution targets. Ticket message endpoints support `GET /api/tickets/{ticket}/messages` and `POST /api/tickets/{ticket}/messages` for scoped collaboration with attachment ingestion, dedupe, and participant sync. Channel adapters can deliver replies via `POST /api/tickets/{ticket}/ingest` when providing the shared `X-Channel-Token` header (see [`docs/collaboration-flows.md`](docs/collaboration-flows.md)).
 
 ## Filament admin
 
 Access the Filament panel at `/admin`. Ticket resources include SLA-aware fields, taxonomy pickers, and respect tenant/brand scopes automatically. A dedicated **Ticket Messages** resource surfaces conversation entries with per-tenant filters so agents can review or append collaboration notes without leaking across brands. Use the seeded credentials (e.g., `admin@acme.test` / `password`).
 
+## Customer portal
+
+Every brand automatically exposes a customer-facing portal at `/portal/{brandSlug}`. The seeded `default` brand provides a quick starting point, while additional brands can tailor their look and feel via the new Filament **Brand** resource (configure primary/secondary/accent colours, logos, and portal domains). Customers can:
+
+- Browse published knowledge base content filtered to their brand.
+- Submit support requests via a guided form; submissions create tenant-scoped tickets, contacts, and public messages with full audit coverage.
+- Track ticket status and review public agent responses without authenticating.
+
+Portal pages inherit brand theming and structured HTML/CSS designed for easy white-labelling. Context is resolved with the `SetBrandFromRoute` middleware so all queries remain tenant-safe even for unauthenticated guests.
+
+## Security controls
+
+Two-factor authentication (TOTP) and IP restrictions safeguard agent sessions:
+
+- `POST /api/security/two-factor` – initiate enrollment and receive the shared secret + recovery codes.
+- `POST /api/security/two-factor/confirm` – verify a 6-digit TOTP code and activate protection.
+- `DELETE /api/security/two-factor` – disable when needed.
+- `PATCH /api/security/ip-restrictions` – manage per-user allow/deny lists for API access.
+
+All actions emit audit log entries, redact sensitive metadata, and respect the `UserSecurityPolicy` (self-service plus tenant admins). Requests from blocked IPs are rejected before hitting controllers, and allowlists can constrain traffic to office networks.
+
 ## Auditing & observability
 
 Ticket and ticket-message lifecycle hooks emit structured JSON logs (`ticket.audit`, `ticket_message.audit`, `attachment.scan.dispatched`) and persist audit rows with non-sensitive metadata. SLA timestamps, collaboration events, and taxonomy updates all participate in the audit trail.
+
+The `/api/health` endpoint (guarded by `X-Monitoring-Token` and optional IP allowlists) returns database/Redis/queue/Scout readiness checks. Results stream to the dedicated `structured` log channel using newline-delimited JSON, simplifying ingestion by log forwarders.
 
 SLA observers dispatch `ticket.sla.breached` / `ticket.sla.recovered` events, while the ticket message pipeline sanitises metadata, scans attachments, and redacts body content from logs.
 
@@ -105,6 +128,11 @@ php artisan test --filter A1-TS-01
 php artisan test --filter A2-DB-01
 php artisan test --filter A2-MD-01
 php artisan test --filter A2-OB-01
+php artisan test --filter Issue-10
+php artisan test --filter Issue-11
+php artisan test --filter A2-RB-01
+php artisan test --filter A2-TS-01
+php artisan test --filter Issue-12
 ```
 
 Running `php artisan test` executes the full suite, including API, policy, and Filament coverage.
@@ -115,6 +143,10 @@ New environment keys:
 
 - `TENANT_CONTEXT_HEADER` – header used to resolve the active tenant for scoped queries.
 - `BRAND_CONTEXT_HEADER` – header used to resolve the active brand for scoped queries.
+- `CHANNEL_INGESTION_SECRET` – shared secret required by channel adapters posting to the ingestion endpoint.
+- `LOG_STRUCTURED_LEVEL` – log level for newline-delimited JSON events persisted to `storage/logs/structured.log`.
+- `MONITORING_TOKEN` – shared token for `/api/health` requests; hash is stored in `monitoring_tokens`.
+- `MONITORING_ALLOWED_IPS` – comma-separated IPv4/IPv6 addresses permitted to call `/api/health`.
 
 ## Change management
 

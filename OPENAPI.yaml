@@ -53,10 +53,41 @@ paths:
       responses:
         '201':
           description: Ticket created
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketResponse'
+  /api/tickets/bulk-actions:
+    post:
+      summary: Apply bulk ticket actions
+      tags: [Tickets]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketBulkActionRequest'
+            examples:
+              assign-and-status:
+                value:
+                  ticket_ids: [1, 2]
+                  actions:
+                    - type: assign
+                      assignee_id: 7
+                    - type: status
+                      status: pending
+      responses:
+        '202':
+          description: Bulk action accepted
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TicketResponse'
+                $ref: '#/components/schemas/TicketBulkActionResponse'
   /api/tickets/{ticket}:
     get:
       summary: Retrieve a ticket
@@ -167,6 +198,135 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TicketMessageResponse'
+  /api/tickets/{ticket}/ingest:
+    post:
+      summary: Ingest a channel message
+      tags: [Ticket Messages]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+        - $ref: '#/components/parameters/TicketId'
+        - $ref: '#/components/parameters/ChannelTokenHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketMessageRequest'
+            examples:
+              ingest-message:
+                value:
+                  body: "Inbound email reply"
+                  channel: email
+                  visibility: internal
+                  author_type: user
+                  author_id: 42
+                  external_id: "imap-123"
+                  attachments:
+                    - disk: local
+                      path: attachments/inbound.eml
+                      filename: inbound.eml
+                      mime_type: message/rfc822
+                      size: 8192
+      responses:
+        '201':
+          description: Ticket message ingested
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketMessageResponse'
+        '401':
+          description: Invalid or missing channel token
+  /api/health:
+    get:
+      summary: Service health snapshot
+      tags: [Observability]
+      parameters:
+        - $ref: '#/components/parameters/MonitoringTokenHeader'
+      responses:
+        '200':
+          description: Connectivity status for critical dependencies
+          content:
+            application/json:
+              examples:
+                healthy:
+                  value:
+                    database: true
+                    redis: true
+                    queue: true
+                    scout: false
+                    timestamp: '2024-01-01T12:00:00Z'
+        '401':
+          description: Missing or invalid monitoring token
+        '403':
+          description: Request IP not permitted
+  /api/security/two-factor:
+    post:
+      summary: Enroll the current user in two-factor authentication
+      tags: [Security]
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Enrollment secret and recovery codes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TwoFactorEnrollmentResponse'
+    delete:
+      summary: Disable two-factor authentication
+      tags: [Security]
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Two-factor authentication disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+  /api/security/two-factor/confirm:
+    post:
+      summary: Confirm two-factor authentication
+      tags: [Security]
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TwoFactorConfirmRequest'
+      responses:
+        '200':
+          description: Two-factor authentication confirmed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '422':
+          description: Invalid verification code
+  /api/security/ip-restrictions:
+    patch:
+      summary: Update per-user IP allow/block lists
+      tags: [Security]
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IpRestrictionRequest'
+      responses:
+        '200':
+          description: IP restrictions updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
 components:
   securitySchemes:
     cookieAuth:
@@ -180,6 +340,20 @@ components:
       required: true
       schema:
         type: integer
+    ChannelTokenHeader:
+      name: X-Channel-Token
+      in: header
+      required: true
+      schema:
+        type: string
+      description: Shared secret for channel ingestion adapters.
+    MonitoringTokenHeader:
+      name: X-Monitoring-Token
+      in: header
+      required: true
+      schema:
+        type: string
+      description: Hashable token whose SHA-256 value is stored in monitoring_tokens.
       description: Active tenant identifier.
     BrandHeader:
       name: X-Brand
@@ -227,6 +401,96 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/TicketMessage'
+    TicketBulkActionRequest:
+      type: object
+      required: [ticket_ids, actions]
+      properties:
+        ticket_ids:
+          type: array
+          items:
+            type: integer
+        actions:
+          type: array
+          items:
+            type: object
+            required: [type]
+            properties:
+              type:
+                type: string
+                enum: [assign, status, sla]
+              assignee_id:
+                type: integer
+              status:
+                type: string
+              resolution_due_at:
+                type: string
+                format: date-time
+              first_response_due_at:
+                type: string
+                format: date-time
+    TicketBulkActionResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            processed:
+              type: integer
+            skipped:
+              type: integer
+            errors:
+              type: array
+              items:
+                type: object
+                properties:
+                  ticket_id:
+                    type: integer
+                  reason:
+                    type: string
+                  messages:
+                    type: array
+                    items:
+                      type: string
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required: [message]
+    TwoFactorEnrollmentResponse:
+      type: object
+      properties:
+        secret:
+          type: string
+          description: Base32 encoded TOTP secret.
+        otpauth_uri:
+          type: string
+          description: otpauth URI compatible with authenticator apps.
+        recovery_codes:
+          type: array
+          items:
+            type: string
+      required: [secret, otpauth_uri, recovery_codes]
+    TwoFactorConfirmRequest:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+          pattern: '^\\d{6}$'
+    IpRestrictionRequest:
+      type: object
+      properties:
+        ip_allowlist:
+          type: array
+          items:
+            type: string
+            format: ipv4
+        ip_blocklist:
+          type: array
+          items:
+            type: string
+            format: ipv4
     TicketMessage:
       type: object
       properties:

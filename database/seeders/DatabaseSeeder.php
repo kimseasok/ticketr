@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
             TenantSeeder::class,
             RoleSeeder::class,
             TicketLifecycleSeeder::class,
+            MonitoringTokenSeeder::class,
             DemoDataSeeder::class,
         ]);
     }

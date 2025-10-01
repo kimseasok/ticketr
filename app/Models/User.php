@@ -30,6 +30,12 @@ class User extends Authenticatable
         'password',
         'tenant_id',
         'brand_id',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
+        'two_factor_confirmed_at',
+        'ip_allowlist',
+        'ip_blocklist',
+        'last_login_ip',
     ];
 
     /**
@@ -40,6 +46,8 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
     ];
 
     /**
@@ -52,6 +60,10 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'two_factor_recovery_codes' => 'array',
+            'two_factor_confirmed_at' => 'datetime',
+            'ip_allowlist' => 'array',
+            'ip_blocklist' => 'array',
         ];
     }
 
