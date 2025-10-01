@@ -21,6 +21,9 @@
 - Channel adapter and ticket macro tables with factories, seeders, API + Filament resources, and OpenAPI coverage. (#25)
 - Ticket watcher management (policy, API, audit logging) with assignment permission mapping and JSON payloads. (#20)
 - Ticket schema & tenancy ADR documenting ERD, seeding runbooks, and watcher strategy. (#22)
+- Email mailbox, inbound/outbound message, and attachment storage with tenant/brand scopes and factories. (#116)
+- IMAP ingestion and SMTP delivery services with structured logging, attachment linking, and OpenAPI coverage. (#117)
+- Email pipeline RBAC, policies, API + Filament resources, and viewer-safe message listings. (#118)
 
 ### Changed
 - Ticket policy now honours Spatie permissions (`tickets.view`, `tickets.manage`).
@@ -38,3 +41,4 @@
 - Demo seeders hydrate brand theming defaults and monitoring tokens for observability agents. (#10, #12)
 - TOTP enrollment/confirmation routes honour tenant policies, redact secrets in audit logs, and enforce IP allowlists. (#11)
 - Watcher synchronisation enforces tenant/brand membership and records `ticket.watchers.synced` audit entries with structured logs. (#20)
+- Role seeding now provisions email pipeline permissions for Admin/Agent/Viewer roles and policies gate delivery/sync actions. (#118)

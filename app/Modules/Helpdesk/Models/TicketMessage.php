@@ -5,12 +5,15 @@ namespace App\Modules\Helpdesk\Models;
 use App\Models\Concerns\BelongsToTenant;
 use App\Models\User;
 use App\Modules\Helpdesk\Models\Contact;
+use App\Modules\Helpdesk\Models\EmailInboundMessage;
+use App\Modules\Helpdesk\Models\EmailOutboundMessage;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 
@@ -105,6 +108,16 @@ class TicketMessage extends Model
     public function attachments(): MorphMany
     {
         return $this->morphMany(Attachment::class, 'attachable');
+    }
+
+    public function inboundEmail(): HasOne
+    {
+        return $this->hasOne(EmailInboundMessage::class);
+    }
+
+    public function outboundEmail(): HasOne
+    {
+        return $this->hasOne(EmailOutboundMessage::class);
     }
 
     public static function generateHash(?string $externalId, string $authorId, string $bodyPreview): string
