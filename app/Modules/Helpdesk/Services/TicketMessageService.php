@@ -46,6 +46,12 @@ class TicketMessageService
 
             $visibility = $this->resolveVisibility($payload);
 
+            $metadata = $payload['metadata'] ?? [];
+
+            if (! empty($payload['email'])) {
+                $metadata['email'] = array_merge($metadata['email'] ?? [], $payload['email']);
+            }
+
             $attributes = [
                 'tenant_id' => $ticket->tenant_id,
                 'brand_id' => $ticket->brand_id,
@@ -56,7 +62,7 @@ class TicketMessageService
                 'external_id' => $externalId,
                 'dedupe_hash' => $dedupeHash,
                 'body' => $payload['body'] ?? '',
-                'metadata' => $payload['metadata'] ?? [],
+                'metadata' => $metadata,
                 'posted_at' => $payload['posted_at'] ?? now(),
             ];
 

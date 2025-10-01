@@ -27,6 +27,11 @@ class RoleSeeder extends Seeder
             'channel-adapters.view',
             'ticket-macros.manage',
             'ticket-macros.view',
+            'email-mailboxes.manage',
+            'email-mailboxes.view',
+            'email-pipeline.deliver',
+            'email-pipeline.sync',
+            'email-messages.view',
         ];
 
         foreach ($permissions as $permission) {
@@ -65,6 +70,8 @@ class RoleSeeder extends Seeder
             'channel-adapters.view',
             'ticket-macros.manage',
             'ticket-macros.view',
+            'email-pipeline.deliver',
+            'email-messages.view',
         ]);
         $viewer->syncPermissions([
             'tickets.view',
@@ -73,6 +80,7 @@ class RoleSeeder extends Seeder
             'knowledge-base.view',
             'channel-adapters.view',
             'ticket-macros.view',
+            'email-messages.view',
         ]);
     }
 }

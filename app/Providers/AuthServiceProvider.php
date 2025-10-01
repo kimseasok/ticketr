@@ -5,12 +5,18 @@ namespace App\Providers;
 use App\Models\User;
 use App\Modules\Helpdesk\Models\ChannelAdapter;
 use App\Modules\Helpdesk\Models\Contact;
+use App\Modules\Helpdesk\Models\EmailInboundMessage;
+use App\Modules\Helpdesk\Models\EmailMailbox;
+use App\Modules\Helpdesk\Models\EmailOutboundMessage;
 use App\Modules\Helpdesk\Models\KnowledgeBaseArticle;
 use App\Modules\Helpdesk\Models\Ticket;
 use App\Modules\Helpdesk\Models\TicketMacro;
 use App\Modules\Helpdesk\Models\TicketMessage;
 use App\Policies\ChannelAdapterPolicy;
 use App\Policies\ContactPolicy;
+use App\Policies\EmailInboundMessagePolicy;
+use App\Policies\EmailMailboxPolicy;
+use App\Policies\EmailOutboundMessagePolicy;
 use App\Policies\KnowledgeBaseArticlePolicy;
 use App\Policies\TicketMacroPolicy;
 use App\Policies\TicketMessagePolicy;
@@ -33,6 +39,9 @@ class AuthServiceProvider extends ServiceProvider
         User::class => UserSecurityPolicy::class,
         ChannelAdapter::class => ChannelAdapterPolicy::class,
         TicketMacro::class => TicketMacroPolicy::class,
+        EmailMailbox::class => EmailMailboxPolicy::class,
+        EmailInboundMessage::class => EmailInboundMessagePolicy::class,
+        EmailOutboundMessage::class => EmailOutboundMessagePolicy::class,
     ];
 
     public function boot(): void

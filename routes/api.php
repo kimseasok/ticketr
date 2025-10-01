@@ -2,6 +2,9 @@
 
 use App\Http\Controllers\Api\ChannelAdapterController;
 use App\Http\Controllers\Api\ChannelIngestionController;
+use App\Http\Controllers\Api\EmailInboundMessageController;
+use App\Http\Controllers\Api\EmailMailboxController;
+use App\Http\Controllers\Api\EmailOutboundMessageController;
 use App\Http\Controllers\Api\HealthStatusController;
 use App\Http\Controllers\Api\TicketBulkActionController;
 use App\Http\Controllers\Api\TwoFactorController;
@@ -26,6 +29,11 @@ Route::middleware(['auth'])->group(function (): void {
 
     Route::apiResource('channel-adapters', ChannelAdapterController::class);
     Route::apiResource('ticket-macros', TicketMacroController::class);
+    Route::apiResource('email/mailboxes', EmailMailboxController::class);
+    Route::post('/email/mailboxes/{mailbox}/sync', [EmailMailboxController::class, 'sync']);
+    Route::apiResource('email/inbound-messages', EmailInboundMessageController::class)->only(['index', 'show']);
+    Route::apiResource('email/outbound-messages', EmailOutboundMessageController::class)->only(['index', 'show']);
+    Route::post('/email/outbound-messages/{message}/deliver', [EmailOutboundMessageController::class, 'deliver']);
 
     Route::post('/security/two-factor', [TwoFactorController::class, 'enroll']);
     Route::post('/security/two-factor/confirm', [TwoFactorController::class, 'confirm']);

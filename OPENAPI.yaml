@@ -191,6 +191,11 @@ paths:
                       filename: reply.pdf
                       mime_type: application/pdf
                       size: 2048
+                  email:
+                    subject: "Re: Customer Support Request"
+                    mailbox_id: 5
+                    to: ["customer@example.test"]
+                    text_body: "Thanks for reaching out, we are on it."
       responses:
         '201':
           description: Ticket message created
@@ -432,6 +437,225 @@ paths:
       responses:
         '204':
           description: Ticket macro deleted
+  /api/email/mailboxes:
+    get:
+      summary: List email mailboxes
+      tags: [Email Pipeline]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+      responses:
+        '200':
+          description: Paginated mailbox list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailMailboxCollection'
+    post:
+      summary: Create email mailbox
+      tags: [Email Pipeline]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailMailboxRequest'
+            examples:
+              create-mailbox:
+                value:
+                  name: Support Mailbox
+                  slug: support-mailbox
+                  direction: bidirectional
+                  protocol: imap
+                  host: imap.example.test
+                  port: 993
+                  encryption: ssl
+                  username: support@example.test
+                  credentials:
+                    password: secret
+                  settings:
+                    folder: INBOX
+                    mailer: smtp
+      responses:
+        '201':
+          description: Mailbox created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailMailboxResponse'
+  /api/email/mailboxes/{mailbox}:
+    get:
+      summary: View email mailbox
+      tags: [Email Pipeline]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+        - $ref: '#/components/parameters/EmailMailboxId'
+      responses:
+        '200':
+          description: Email mailbox detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailMailboxResponse'
+    put:
+      summary: Update email mailbox
+      tags: [Email Pipeline]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+        - $ref: '#/components/parameters/EmailMailboxId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailMailboxRequest'
+      responses:
+        '200':
+          description: Email mailbox updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailMailboxResponse'
+    delete:
+      summary: Delete email mailbox
+      tags: [Email Pipeline]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+        - $ref: '#/components/parameters/EmailMailboxId'
+      responses:
+        '200':
+          description: Email mailbox deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+  /api/email/mailboxes/{mailbox}/sync:
+    post:
+      summary: Synchronize mailbox
+      tags: [Email Pipeline]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+        - $ref: '#/components/parameters/EmailMailboxId'
+      responses:
+        '200':
+          description: Synchronization summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  fetched:
+                    type: integer
+                  processed:
+                    type: integer
+  /api/email/inbound-messages:
+    get:
+      summary: List inbound email messages
+      tags: [Email Pipeline]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+      responses:
+        '200':
+          description: Paginated inbound messages
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailInboundMessageCollection'
+  /api/email/inbound-messages/{email_inbound_message}:
+    get:
+      summary: View inbound email message
+      tags: [Email Pipeline]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+        - $ref: '#/components/parameters/EmailInboundMessageId'
+      responses:
+        '200':
+          description: Inbound email message detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailInboundMessageResponse'
+  /api/email/outbound-messages:
+    get:
+      summary: List outbound email messages
+      tags: [Email Pipeline]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+      responses:
+        '200':
+          description: Paginated outbound messages
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailOutboundMessageCollection'
+  /api/email/outbound-messages/{email_outbound_message}:
+    get:
+      summary: View outbound email message
+      tags: [Email Pipeline]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+        - $ref: '#/components/parameters/EmailOutboundMessageId'
+      responses:
+        '200':
+          description: Outbound email message detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailOutboundMessageResponse'
+  /api/email/outbound-messages/{email_outbound_message}/deliver:
+    post:
+      summary: Deliver outbound email message
+      tags: [Email Pipeline]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+        - $ref: '#/components/parameters/EmailOutboundMessageId'
+      responses:
+        '200':
+          description: Delivery result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailOutboundDeliveryResponse'
+        '422':
+          description: Delivery failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailOutboundDeliveryResponse'
   /api/health:
     get:
       summary: Service health snapshot
@@ -573,6 +797,24 @@ components:
       required: true
       schema:
         type: integer
+    EmailMailboxId:
+      name: mailbox
+      in: path
+      required: true
+      schema:
+        type: integer
+    EmailInboundMessageId:
+      name: email_inbound_message
+      in: path
+      required: true
+      schema:
+        type: integer
+    EmailOutboundMessageId:
+      name: email_outbound_message
+      in: path
+      required: true
+      schema:
+        type: integer
   schemas:
     TicketCollection:
       type: object
@@ -606,6 +848,263 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/TicketMessage'
+    EmailMailboxCollection:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailMailbox'
+        links:
+          type: object
+        meta:
+          type: object
+    EmailMailboxResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/EmailMailbox'
+    EmailMailboxRequest:
+      type: object
+      required: [name, slug, direction, protocol, host, port, username, credentials]
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        direction:
+          type: string
+          enum: [inbound, outbound, bidirectional]
+        protocol:
+          type: string
+          enum: [imap, smtp]
+        host:
+          type: string
+        port:
+          type: integer
+        encryption:
+          type: string
+          nullable: true
+          enum: [ssl, tls, starttls, none]
+        username:
+          type: string
+        credentials:
+          type: object
+          required: [password]
+          properties:
+            password:
+              type: string
+            client_secret:
+              type: string
+        settings:
+          type: object
+          additionalProperties: true
+        brand_id:
+          type: integer
+          nullable: true
+        is_active:
+          type: boolean
+    EmailMailbox:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        direction:
+          type: string
+        protocol:
+          type: string
+        host:
+          type: string
+        port:
+          type: integer
+        encryption:
+          type: string
+          nullable: true
+        username_hash:
+          type: string
+          description: First 16 characters of the SHA-256 hash of the username.
+        is_active:
+          type: boolean
+        brand_id:
+          type: integer
+          nullable: true
+        last_synced_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    EmailInboundMessageCollection:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailInboundMessage'
+        links:
+          type: object
+        meta:
+          type: object
+    EmailInboundMessageResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/EmailInboundMessage'
+    EmailInboundMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+        mailbox_id:
+          type: integer
+        ticket_id:
+          type: integer
+          nullable: true
+        ticket_message_id:
+          type: integer
+          nullable: true
+        subject:
+          type: string
+          nullable: true
+        from_email:
+          type: string
+          format: email
+        from_name:
+          type: string
+          nullable: true
+        to_recipients:
+          type: array
+          items:
+            type: string
+            format: email
+        cc_recipients:
+          type: array
+          items:
+            type: string
+            format: email
+        bcc_recipients:
+          type: array
+          items:
+            type: string
+            format: email
+        status:
+          type: string
+          enum: [pending, processed, failed]
+        received_at:
+          type: string
+          format: date-time
+        processed_at:
+          type: string
+          format: date-time
+          nullable: true
+        attachments_count:
+          type: integer
+        headers:
+          type: object
+          additionalProperties: true
+        error_info:
+          type: object
+          nullable: true
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+    EmailOutboundMessageCollection:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailOutboundMessage'
+        links:
+          type: object
+        meta:
+          type: object
+    EmailOutboundMessageResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/EmailOutboundMessage'
+    EmailOutboundMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+        mailbox_id:
+          type: integer
+          nullable: true
+        ticket_id:
+          type: integer
+          nullable: true
+        ticket_message_id:
+          type: integer
+          nullable: true
+        subject:
+          type: string
+          nullable: true
+        to_recipients:
+          type: array
+          items:
+            type: string
+            format: email
+        cc_recipients:
+          type: array
+          items:
+            type: string
+            format: email
+        bcc_recipients:
+          type: array
+          items:
+            type: string
+            format: email
+        status:
+          type: string
+          enum: [queued, sending, sent, failed]
+        attempts:
+          type: integer
+        provider_message_id:
+          type: string
+          nullable: true
+        scheduled_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_attempted_at:
+          type: string
+          format: date-time
+          nullable: true
+        sent_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_error:
+          type: object
+          nullable: true
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+    EmailOutboundDeliveryResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [sent, failed]
+        provider_message_id:
+          type: string
+          nullable: true
+        error:
+          type: object
+          nullable: true
+          additionalProperties: true
     TicketBulkActionRequest:
       type: object
       required: [ticket_ids, actions]
@@ -809,6 +1308,34 @@ components:
               metadata:
                 type: object
                 additionalProperties: true
+        email:
+          type: object
+          description: Optional email delivery payload when channel is email.
+          properties:
+            subject:
+              type: string
+            mailbox_id:
+              type: integer
+            to:
+              type: array
+              minItems: 1
+              items:
+                type: string
+                format: email
+            cc:
+              type: array
+              items:
+                type: string
+                format: email
+            bcc:
+              type: array
+              items:
+                type: string
+                format: email
+            text_body:
+              type: string
+            html_body:
+              type: string
     TicketRequest:
       type: object
       properties:

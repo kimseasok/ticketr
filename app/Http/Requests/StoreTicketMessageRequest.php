@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Support\Tenancy\TenantContext;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -9,11 +10,28 @@ class StoreTicketMessageRequest extends FormRequest
 {
     public function authorize(): bool
     {
+        $user = $this->user();
+
+        if (! $user) {
+            return false;
+        }
+
+        if ($this->filled('email') && ! ($user->hasRole('Admin') || $user->can('email-pipeline.deliver'))) {
+            return false;
+        }
+
         return true;
     }
 
     public function rules(): array
     {
+        $tenantId = app(TenantContext::class)->getTenantId();
+        $mailboxRule = Rule::exists('email_mailboxes', 'id');
+
+        if ($tenantId !== null) {
+            $mailboxRule->where('tenant_id', $tenantId);
+        }
+
         return [
             'body' => ['required', 'string'],
             'visibility' => ['sometimes', Rule::in(['public', 'internal'])],
@@ -39,6 +57,17 @@ class StoreTicketMessageRequest extends FormRequest
             'attachments.*.mime_type' => ['required_with:attachments', 'string'],
             'attachments.*.size' => ['required_with:attachments', 'integer', 'min:0'],
             'attachments.*.metadata' => ['nullable', 'array'],
+            'email' => ['sometimes', 'array'],
+            'email.subject' => ['sometimes', 'string', 'max:255'],
+            'email.mailbox_id' => ['sometimes', $mailboxRule],
+            'email.to' => ['required_with:email', 'array', 'min:1'],
+            'email.to.*' => ['email'],
+            'email.cc' => ['sometimes', 'array'],
+            'email.cc.*' => ['email'],
+            'email.bcc' => ['sometimes', 'array'],
+            'email.bcc.*' => ['email'],
+            'email.text_body' => ['sometimes', 'string'],
+            'email.html_body' => ['sometimes', 'string'],
         ];
     }
 }

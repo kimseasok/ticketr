@@ -92,6 +92,16 @@ Manage seeded channel connectors and reusable reply macros via API or Filament:
 
 See the new ADR at [`docs/adr/2024-06-12-ticket-schema-and-tenancy.md`](docs/adr/2024-06-12-ticket-schema-and-tenancy.md) for schema diagrams, seeding strategy, and tenancy constraints.
 
+### Email pipeline
+
+Bidirectional email support is available for each tenant through secure mailbox configurations:
+
+- `GET /api/email/mailboxes` / `POST /api/email/mailboxes` to manage IMAP/SMTP credentials scoped to the active tenant.
+- `POST /api/email/mailboxes/{mailbox}/sync` to fetch messages from upstream providers and enqueue them for processing.
+- `GET /api/email/inbound-messages` and `GET /api/email/outbound-messages` to review stored mail, along with `POST /api/email/outbound-messages/{id}/deliver` to trigger retries.
+
+Mailboxes, inbound queues, and outbound messages are exposed in Filament under **Ticketing → Email Mailboxes / Inbound Emails / Outbound Emails**. Credentials are encrypted at rest, username hashes are returned for auditing, and attachments flow through the existing scanner before being linked to ticket messages.
+
 ## Filament admin
 
 Access the Filament panel at `/admin`. Ticket resources include SLA-aware fields, taxonomy pickers, and respect tenant/brand scopes automatically. A dedicated **Ticket Messages** resource surfaces conversation entries with per-tenant filters so agents can review or append collaboration notes without leaking across brands. Use the seeded credentials (e.g., `admin@acme.test` / `password`).
@@ -146,6 +156,9 @@ php artisan test --filter Issue-11
 php artisan test --filter A2-RB-01
 php artisan test --filter A2-TS-01
 php artisan test --filter Issue-12
+php artisan test --filter TKT-EMAIL-DB-01
+php artisan test --filter TKT-EMAIL-MD-02
+php artisan test --filter TKT-EMAIL-RB-03
 ```
 
 Running `php artisan test` executes the full suite, including API, policy, and Filament coverage.

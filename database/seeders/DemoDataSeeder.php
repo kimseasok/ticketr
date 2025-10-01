@@ -5,6 +5,9 @@ namespace Database\Seeders;
 use App\Models\User;
 use App\Modules\Helpdesk\Models\Company;
 use App\Modules\Helpdesk\Models\Contact;
+use App\Modules\Helpdesk\Models\EmailInboundMessage;
+use App\Modules\Helpdesk\Models\EmailMailbox;
+use App\Modules\Helpdesk\Models\EmailOutboundMessage;
 use App\Modules\Helpdesk\Models\KnowledgeBaseArticle;
 use App\Modules\Helpdesk\Models\KnowledgeBaseCategory;
 use App\Modules\Helpdesk\Models\Tenant;
@@ -14,6 +17,7 @@ use App\Modules\Helpdesk\Models\TicketTag;
 use App\Modules\Helpdesk\Services\TicketMessageService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class DemoDataSeeder extends Seeder
 {
@@ -27,6 +31,22 @@ class DemoDataSeeder extends Seeder
         app(TicketLifecycleSeeder::class)->runForTenant($tenant->id);
 
         $brand = $tenant->brands->first();
+
+        $mailbox = EmailMailbox::firstOrCreate([
+            'tenant_id' => $tenant->id,
+            'slug' => 'acme-support',
+        ], [
+            'brand_id' => $brand?->id,
+            'name' => 'ACME Support Mailbox',
+            'direction' => 'bidirectional',
+            'protocol' => 'imap',
+            'host' => 'imap.acme.test',
+            'port' => 993,
+            'encryption' => 'ssl',
+            'username' => 'support@acme.test',
+            'credentials' => ['password' => 'secret-demo'],
+            'settings' => ['folder' => 'INBOX', 'mailer' => 'smtp'],
+        ]);
 
         if ($brand) {
             $brand->forceFill([
@@ -150,7 +170,7 @@ class DemoDataSeeder extends Seeder
         /** @var TicketMessageService $messageService */
         $messageService = app(TicketMessageService::class);
 
-        $messageService->append($ticket, [
+        $inboundTicketMessage = $messageService->append($ticket, [
             'body' => 'Hi team, I need help with my onboarding integration.',
             'author_type' => 'contact',
             'author_id' => $contact->id,
@@ -174,7 +194,7 @@ class DemoDataSeeder extends Seeder
             ],
         ]);
 
-        $messageService->append($ticket, [
+        $outboundTicketMessage = $messageService->append($ticket, [
             'body' => 'Thanks Bruce, I am reviewing the logs now.',
             'author_type' => 'user',
             'author_id' => $agent->id,
@@ -189,6 +209,43 @@ class DemoDataSeeder extends Seeder
                     'last_seen_at' => now(),
                 ],
             ],
+        ]);
+
+        EmailInboundMessage::firstOrCreate([
+            'tenant_id' => $tenant->id,
+            'message_id' => 'demo-inbound-1',
+        ], [
+            'brand_id' => $brand?->id,
+            'mailbox_id' => $mailbox->id,
+            'ticket_id' => $ticket->id,
+            'ticket_message_id' => $inboundTicketMessage->id,
+            'thread_id' => 'demo-thread-1',
+            'subject' => $ticket->subject,
+            'from_name' => $contact->name,
+            'from_email' => $contact->email,
+            'to_recipients' => [$mailbox->username],
+            'text_body' => $inboundTicketMessage->body,
+            'attachments_count' => 0,
+            'status' => 'processed',
+            'received_at' => now()->subMinutes(15),
+            'processed_at' => now()->subMinutes(10),
+        ]);
+
+        EmailOutboundMessage::firstOrCreate([
+            'tenant_id' => $tenant->id,
+            'ticket_message_id' => $outboundTicketMessage->id,
+        ], [
+            'brand_id' => $brand?->id,
+            'mailbox_id' => $mailbox->id,
+            'ticket_id' => $ticket->id,
+            'subject' => $ticket->subject,
+            'to_recipients' => [$contact->email],
+            'text_body' => $outboundTicketMessage->body,
+            'status' => 'sent',
+            'attempts' => 1,
+            'sent_at' => now()->subMinutes(5),
+            'scheduled_at' => now()->subMinutes(6),
+            'provider_message_id' => (string) Str::uuid(),
         ]);
     }
 }
