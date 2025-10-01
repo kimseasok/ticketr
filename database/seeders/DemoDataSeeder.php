@@ -28,6 +28,16 @@ class DemoDataSeeder extends Seeder
 
         $brand = $tenant->brands->first();
 
+        if ($brand) {
+            $brand->forceFill([
+                'primary_color' => '#2563eb',
+                'secondary_color' => '#1d4ed8',
+                'accent_color' => '#f97316',
+                'logo_url' => 'https://dummyimage.com/200x60/2563eb/ffffff&text=Ticketr',
+                'portal_domain' => 'https://portal.acme.test',
+            ])->save();
+        }
+
         $admin = User::firstOrCreate([
             'email' => 'admin@acme.test',
         ], [

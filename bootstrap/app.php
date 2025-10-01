@@ -12,7 +12,10 @@ $app = Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->appendToGroup('api', [\App\Http\Middleware\ResolveTenantContext::class]);
+        $middleware->appendToGroup('api', [
+            \App\Http\Middleware\ResolveTenantContext::class,
+            \App\Http\Middleware\EnforceUserIpRestrictions::class,
+        ]);
         $middleware->appendToGroup('web', [\App\Http\Middleware\ResolveTenantContext::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

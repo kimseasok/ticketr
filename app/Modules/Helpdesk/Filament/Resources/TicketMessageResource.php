@@ -127,6 +127,7 @@ class TicketMessageResource extends Resource
 
         return $query
             ->when($user->tenant_id, fn (Builder $builder) => $builder->where('tenant_id', $user->tenant_id))
-            ->when($user->brand_id, fn (Builder $builder) => $builder->where('brand_id', $user->brand_id));
+            ->when($user->brand_id, fn (Builder $builder) => $builder->where('brand_id', $user->brand_id))
+            ->visibleTo($user);
     }
 }

@@ -10,6 +10,7 @@ use App\Modules\Helpdesk\Models\TicketMessage;
 use App\Modules\Helpdesk\Services\TicketMessageService;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Gate;
 
@@ -21,12 +22,16 @@ class TicketMessageController extends Controller
     ) {
     }
 
-    public function index(Ticket $ticket): AnonymousResourceCollection
+    public function index(Request $request, Ticket $ticket): AnonymousResourceCollection
     {
         $this->assertTicketAccessible($ticket);
         Gate::authorize('viewAny', [TicketMessage::class, $ticket]);
 
-        $messages = $ticket->messages()->with('attachments')->latest('posted_at')->paginate(25);
+        $messages = $ticket->messages()
+            ->visibleTo($request->user())
+            ->with('attachments')
+            ->latest('posted_at')
+            ->paginate(25);
 
         return TicketMessageResource::collection($messages);
     }

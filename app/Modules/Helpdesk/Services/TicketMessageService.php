@@ -44,12 +44,14 @@ class TicketMessageService
                 return $existing;
             }
 
+            $visibility = $this->resolveVisibility($payload);
+
             $attributes = [
                 'tenant_id' => $ticket->tenant_id,
                 'brand_id' => $ticket->brand_id,
                 'author_type' => $payload['author_type'] ?? 'system',
                 'author_id' => $payload['author_id'] ?? null,
-                'visibility' => $payload['visibility'] ?? 'public',
+                'visibility' => $visibility,
                 'channel' => $payload['channel'] ?? $ticket->channel,
                 'external_id' => $externalId,
                 'dedupe_hash' => $dedupeHash,
@@ -64,7 +66,8 @@ class TicketMessageService
                 $this->createAttachments($message, $payload['attachments']);
             }
 
-            $this->syncParticipants($ticket, $message, $payload['participants'] ?? []);
+            $participants = $this->filterParticipantsForVisibility($visibility, $payload['participants'] ?? []);
+            $this->syncParticipants($ticket, $message, $participants, $visibility);
 
             $this->updateTicketTimestamps($ticket, $message);
 
@@ -80,6 +83,28 @@ class TicketMessageService
 
             return $message->fresh(['attachments']);
         });
+    }
+
+    private function resolveVisibility(array &$payload): string
+    {
+        $visibility = $payload['visibility'] ?? 'public';
+        $authorType = $payload['author_type'] ?? 'system';
+
+        if ($authorType === 'contact' && $visibility !== 'public') {
+            Log::channel('stack')->warning('ticket_message.visibility_downgraded', [
+                'reason' => 'contact_author',
+            ]);
+
+            $visibility = 'public';
+        }
+
+        if (! in_array($visibility, ['public', 'internal'], true)) {
+            $visibility = 'public';
+        }
+
+        $payload['visibility'] = $visibility;
+
+        return $visibility;
     }
 
     private function createAttachments(TicketMessage $message, array $attachments): void
@@ -105,7 +130,20 @@ class TicketMessageService
         $message->update(['attachments_count' => $message->attachments()->count()]);
     }
 
-    private function syncParticipants(Ticket $ticket, TicketMessage $message, array $participants): void
+    private function filterParticipantsForVisibility(string $visibility, array $participants): array
+    {
+        if ($visibility !== 'internal') {
+            return $participants;
+        }
+
+        return array_values(array_filter($participants, function (array $participant): bool {
+            $type = $participant['participant_type'] ?? 'contact';
+
+            return $type === 'user';
+        }));
+    }
+
+    private function syncParticipants(Ticket $ticket, TicketMessage $message, array $participants, string $visibility): void
     {
         foreach ($participants as $participant) {
             $record = TicketParticipant::query()->firstOrNew([
@@ -117,9 +155,29 @@ class TicketMessageService
 
             $record->brand_id = $ticket->brand_id;
             $record->last_message_id = $message->id;
-            $record->applySnapshot($participant);
+            $record->applySnapshot($this->sanitizeParticipantSnapshot($participant, $visibility));
             $record->save();
         }
+    }
+
+    private function sanitizeParticipantSnapshot(array $participant, string $messageVisibility): array
+    {
+        $type = $participant['participant_type'] ?? 'contact';
+        $role = $participant['role'] ?? ($type === 'user' ? 'agent' : 'requester');
+        $visibility = $participant['visibility'] ?? ($type === 'user' ? 'internal' : 'external');
+
+        if ($type !== 'user') {
+            $visibility = 'external';
+        }
+
+        if ($messageVisibility === 'internal' && $type !== 'user') {
+            $visibility = 'external';
+        }
+
+        return array_merge($participant, [
+            'role' => $role,
+            'visibility' => $visibility,
+        ]);
     }
 
     private function updateTicketTimestamps(Ticket $ticket, TicketMessage $message): void

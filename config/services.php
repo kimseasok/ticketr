@@ -2,6 +2,10 @@
 
 return [
 
+    'channels' => [
+        'ingestion_secret' => env('CHANNEL_INGESTION_SECRET'),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Third Party Services

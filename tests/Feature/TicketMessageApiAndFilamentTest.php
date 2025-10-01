@@ -214,4 +214,52 @@ class TicketMessageApiAndFilamentTest extends TestCase
             ])
             ->assertForbidden();
     }
+
+    /** @test @group A2-RB-01 */
+    public function viewer_cannot_access_internal_messages_via_api(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $brand = Brand::factory()->for($tenant)->create();
+        $contact = Contact::factory()->forBrand($brand)->create();
+        $ticket = Ticket::factory()->forBrand($brand)->create([
+            'tenant_id' => $tenant->id,
+            'brand_id' => $brand->id,
+            'contact_id' => $contact->id,
+        ]);
+
+        /** @var TicketMessageService $service */
+        $service = app(TicketMessageService::class);
+        $public = $service->append($ticket, [
+            'body' => 'Public update',
+            'author_type' => 'user',
+            'author_id' => User::factory()->create(['tenant_id' => $tenant->id, 'brand_id' => $brand->id])->id,
+            'visibility' => 'public',
+        ]);
+
+        $service->append($ticket, [
+            'body' => 'Internal only note',
+            'author_type' => 'user',
+            'author_id' => User::factory()->create(['tenant_id' => $tenant->id, 'brand_id' => $brand->id])->id,
+            'visibility' => 'internal',
+        ]);
+
+        $viewer = User::factory()->create([
+            'tenant_id' => $tenant->id,
+            'brand_id' => $brand->id,
+        ]);
+        $viewer->assignRole('Viewer');
+
+        $this->actingAs($viewer);
+
+        $headers = [
+            config('tenancy.tenant_header') => $tenant->id,
+            config('tenancy.brand_header') => $brand->id,
+        ];
+
+        $this->withHeaders($headers)
+            ->getJson("/api/tickets/{$ticket->id}/messages")
+            ->assertOk()
+            ->assertJsonMissing(['body' => 'Internal only note'])
+            ->assertJsonFragment(['id' => $public->id]);
+    }
 }
