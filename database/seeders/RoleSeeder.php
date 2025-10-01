@@ -15,6 +15,8 @@ class RoleSeeder extends Seeder
         $permissions = [
             'tickets.manage',
             'tickets.view',
+            'ticket-messages.manage',
+            'ticket-messages.view',
             'contacts.manage',
             'contacts.view',
             'knowledge-base.manage',
@@ -45,6 +47,8 @@ class RoleSeeder extends Seeder
         $agent->syncPermissions([
             'tickets.manage',
             'tickets.view',
+            'ticket-messages.manage',
+            'ticket-messages.view',
             'contacts.manage',
             'contacts.view',
             'knowledge-base.manage',
@@ -52,6 +56,7 @@ class RoleSeeder extends Seeder
         ]);
         $viewer->syncPermissions([
             'tickets.view',
+            'ticket-messages.view',
             'contacts.view',
             'knowledge-base.view',
         ]);

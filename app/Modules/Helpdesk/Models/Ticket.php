@@ -5,7 +5,9 @@ namespace App\Modules\Helpdesk\Models;
 use App\Models\Concerns\BelongsToTenant;
 use App\Models\User;
 use App\Modules\Helpdesk\Events\TicketStatusChanged;
+use App\Modules\Helpdesk\Models\Attachment;
 use App\Modules\Helpdesk\Models\TicketCategory;
+use App\Modules\Helpdesk\Models\TicketMessage;
 use App\Modules\Helpdesk\Models\TicketPriority;
 use App\Modules\Helpdesk\Models\TicketStatus;
 use App\Modules\Helpdesk\Models\TicketTag;
@@ -163,7 +165,7 @@ class Ticket extends Model
 
     public function messages(): HasMany
     {
-        return $this->hasMany(Message::class);
+        return $this->hasMany(TicketMessage::class)->orderBy('posted_at');
     }
 
     public function attachments(): MorphMany
