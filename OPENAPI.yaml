@@ -108,6 +108,65 @@ paths:
       responses:
         '202':
           description: Ticket archived (soft deleted)
+  /api/tickets/{ticket}/messages:
+    get:
+      summary: List ticket messages
+      tags: [Ticket Messages]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+        - $ref: '#/components/parameters/TicketId'
+      responses:
+        '200':
+          description: Paginated ticket message collection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketMessageCollection'
+    post:
+      summary: Append a ticket message
+      tags: [Ticket Messages]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+        - $ref: '#/components/parameters/TicketId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketMessageRequest'
+            examples:
+              append-message:
+                value:
+                  body: "Agent reply captured from email"
+                  visibility: internal
+                  channel: email
+                  author_type: user
+                  author_id: 17
+                  external_id: "gmail-abc123"
+                  participants:
+                    - participant_type: user
+                      participant_id: 17
+                      role: agent
+                      visibility: internal
+                  attachments:
+                    - disk: local
+                      path: attachments/reply.pdf
+                      filename: reply.pdf
+                      mime_type: application/pdf
+                      size: 2048
+      responses:
+        '201':
+          description: Ticket message created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketMessageResponse'
 components:
   securitySchemes:
     cookieAuth:
@@ -152,6 +211,135 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/Ticket'
+    TicketMessageCollection:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TicketMessage'
+        links:
+          type: object
+        meta:
+          type: object
+    TicketMessageResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/TicketMessage'
+    TicketMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+        ticket_id:
+          type: integer
+        visibility:
+          type: string
+        channel:
+          type: string
+        body:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+        attachments_count:
+          type: integer
+        posted_at:
+          type: string
+          format: date-time
+        author:
+          type: object
+          properties:
+            type:
+              type: string
+            id:
+              type: integer
+        attachments:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              filename:
+                type: string
+              mime_type:
+                type: string
+              size:
+                type: integer
+              metadata:
+                type: object
+                additionalProperties: true
+    TicketMessageRequest:
+      type: object
+      required: [body]
+      properties:
+        body:
+          type: string
+        visibility:
+          type: string
+          enum: [public, internal]
+        channel:
+          type: string
+        author_type:
+          type: string
+          enum: [user, contact, system]
+        author_id:
+          type: integer
+        external_id:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+        posted_at:
+          type: string
+          format: date-time
+        participants:
+          type: array
+          items:
+            type: object
+            properties:
+              participant_type:
+                type: string
+                enum: [user, contact, system]
+              participant_id:
+                type: integer
+              role:
+                type: string
+                enum: [requester, cc, agent, watcher]
+              visibility:
+                type: string
+                enum: [internal, external]
+              last_seen_at:
+                type: string
+                format: date-time
+              last_typing_at:
+                type: string
+                format: date-time
+              is_muted:
+                type: boolean
+              metadata:
+                type: object
+                additionalProperties: true
+        attachments:
+          type: array
+          items:
+            type: object
+            properties:
+              disk:
+                type: string
+              path:
+                type: string
+              filename:
+                type: string
+              mime_type:
+                type: string
+              size:
+                type: integer
+              metadata:
+                type: object
+                additionalProperties: true
     TicketRequest:
       type: object
       properties:
