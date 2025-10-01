@@ -11,6 +11,7 @@ use App\Modules\Helpdesk\Models\Tenant;
 use App\Modules\Helpdesk\Models\Ticket;
 use App\Modules\Helpdesk\Models\TicketCategory;
 use App\Modules\Helpdesk\Models\TicketTag;
+use App\Modules\Helpdesk\Services\TicketMessageService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -135,5 +136,49 @@ class DemoDataSeeder extends Seeder
 
         $ticket->syncCategories([$supportCategory->id], $admin->id);
         $ticket->syncTags([$vipTag->id], $agent->id);
+
+        /** @var TicketMessageService $messageService */
+        $messageService = app(TicketMessageService::class);
+
+        $messageService->append($ticket, [
+            'body' => 'Hi team, I need help with my onboarding integration.',
+            'author_type' => 'contact',
+            'author_id' => $contact->id,
+            'channel' => 'email',
+            'metadata' => ['source' => 'inbound'],
+            'participants' => [
+                [
+                    'participant_type' => 'contact',
+                    'participant_id' => $contact->id,
+                    'role' => 'requester',
+                    'visibility' => 'external',
+                    'last_seen_at' => now(),
+                ],
+                [
+                    'participant_type' => 'user',
+                    'participant_id' => $agent->id,
+                    'role' => 'agent',
+                    'visibility' => 'internal',
+                    'last_seen_at' => now(),
+                ],
+            ],
+        ]);
+
+        $messageService->append($ticket, [
+            'body' => 'Thanks Bruce, I am reviewing the logs now.',
+            'author_type' => 'user',
+            'author_id' => $agent->id,
+            'channel' => 'email',
+            'metadata' => ['source' => 'outbound'],
+            'participants' => [
+                [
+                    'participant_type' => 'user',
+                    'participant_id' => $agent->id,
+                    'role' => 'agent',
+                    'visibility' => 'internal',
+                    'last_seen_at' => now(),
+                ],
+            ],
+        ]);
     }
 }
