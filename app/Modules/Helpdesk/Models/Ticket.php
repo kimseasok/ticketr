@@ -6,7 +6,11 @@ use App\Models\Concerns\BelongsToTenant;
 use App\Models\User;
 use App\Modules\Helpdesk\Events\TicketStatusChanged;
 use App\Modules\Helpdesk\Models\TicketCategory;
+use App\Modules\Helpdesk\Models\TicketPriority;
+use App\Modules\Helpdesk\Models\TicketStatus;
 use App\Modules\Helpdesk\Models\TicketTag;
+use App\Modules\Helpdesk\Models\TicketWorkflowTransition;
+use App\Modules\Helpdesk\Services\TicketSlaEvaluator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -16,6 +20,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\App;
+use Illuminate\Validation\ValidationException;
 
 class Ticket extends Model
 {
@@ -77,8 +83,14 @@ class Ticket extends Model
             $ticket->last_activity_at ??= now();
         });
 
+        static::saving(function (self $ticket): void {
+            $ticket->applySlaMetadata();
+        });
+
         static::updating(function (self $ticket): void {
             if ($ticket->isDirty('status')) {
+                self::ensureStatusTransitionIsAllowed($ticket);
+
                 $previousStatus = $ticket->getOriginal('status');
                 $ticket->status_changed_at = now();
                 if ($ticket->status === self::STATUS_ARCHIVED && $ticket->archived_at === null) {
@@ -123,6 +135,18 @@ class Ticket extends Model
         return $this->belongsTo(User::class, 'assigned_to');
     }
 
+    public function statusDefinition(): BelongsTo
+    {
+        return $this->belongsTo(TicketStatus::class, 'status', 'slug')
+            ->where('ticket_statuses.tenant_id', $this->tenant_id);
+    }
+
+    public function priorityDefinition(): BelongsTo
+    {
+        return $this->belongsTo(TicketPriority::class, 'priority', 'slug')
+            ->where('ticket_priorities.tenant_id', $this->tenant_id);
+    }
+
     public function categories(): BelongsToMany
     {
         return $this->belongsToMany(TicketCategory::class, 'ticket_category_ticket')
@@ -154,7 +178,7 @@ class Ticket extends Model
 
     public function auditPayload(): array
     {
-        return Arr::only($this->getAttributes(), [
+        $payload = Arr::only($this->getAttributes(), [
             'id',
             'tenant_id',
             'brand_id',
@@ -173,6 +197,10 @@ class Ticket extends Model
             'archived_at',
             'last_activity_at',
         ]);
+
+        $payload['metadata'] = $this->safeMetadata();
+
+        return $payload;
     }
 
     /**
@@ -203,6 +231,13 @@ class Ticket extends Model
         $this->tags()->sync($this->preparePivotData($validIds, $userId));
     }
 
+    public function safeMetadata(): array
+    {
+        $metadata = $this->metadata ?? [];
+
+        return Arr::only($metadata, ['sla']);
+    }
+
     /**
      * @param  array<int,int>  $ids
      * @return array<int,array<string,mixed>>
@@ -220,5 +255,59 @@ class Ticket extends Model
                 ];
             })
             ->all();
+    }
+
+    private static function ensureStatusTransitionIsAllowed(self $ticket): void
+    {
+        $fromStatus = $ticket->getOriginal('status');
+        $toStatus = $ticket->status;
+
+        if ($fromStatus === $toStatus) {
+            return;
+        }
+
+        $tenantId = $ticket->tenant_id;
+
+        $from = TicketStatus::withoutGlobalScope('tenant')
+            ->where('tenant_id', $tenantId)
+            ->where('slug', $fromStatus)
+            ->first();
+
+        $to = TicketStatus::withoutGlobalScope('tenant')
+            ->where('tenant_id', $tenantId)
+            ->where('slug', $toStatus)
+            ->first();
+
+        if (! $from || ! $to) {
+            throw ValidationException::withMessages([
+                'status' => __('The requested status is not available for this tenant.'),
+            ]);
+        }
+
+        $allowed = TicketWorkflowTransition::withoutGlobalScope('tenant')
+            ->where('tenant_id', $tenantId)
+            ->where('from_status_id', $from->id)
+            ->where('to_status_id', $to->id)
+            ->exists();
+
+        if (! $allowed) {
+            throw ValidationException::withMessages([
+                'status' => __('Transition from :from to :to is not allowed.', [
+                    'from' => $fromStatus,
+                    'to' => $toStatus,
+                ]),
+            ]);
+        }
+    }
+
+    private function applySlaMetadata(): void
+    {
+        /** @var TicketSlaEvaluator $evaluator */
+        $evaluator = App::make(TicketSlaEvaluator::class);
+
+        $metadata = $this->metadata ?? [];
+        $metadata['sla'] = $evaluator->evaluate($this);
+
+        $this->metadata = $metadata;
     }
 }

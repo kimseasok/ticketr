@@ -24,8 +24,8 @@ class TicketObserver
         $this->recordAudit(
             $ticket,
             'updated',
-            Arr::only($ticket->getOriginal(), array_keys($changes)),
-            Arr::only($ticket->getAttributes(), array_keys($changes))
+            $this->sanitizeValues(Arr::only($ticket->getOriginal(), array_keys($changes))),
+            $this->sanitizeValues(Arr::only($ticket->getAttributes(), array_keys($changes)))
         );
     }
 
@@ -59,5 +59,20 @@ class TicketObserver
             'brand_id' => $ticket->brand_id,
             'user_id' => $payload['user_id'],
         ]);
+    }
+
+    private function sanitizeValues(array $values): array
+    {
+        if (array_key_exists('metadata', $values)) {
+            $raw = $values['metadata'];
+
+            if (is_string($raw)) {
+                $raw = json_decode($raw, true) ?: [];
+            }
+
+            $values['metadata'] = Arr::only($raw ?? [], ['sla']);
+        }
+
+        return $values;
     }
 }

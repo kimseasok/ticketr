@@ -23,6 +23,8 @@ class DemoDataSeeder extends Seeder
             return;
         }
 
+        app(TicketLifecycleSeeder::class)->runForTenant($tenant->id);
+
         $brand = $tenant->brands->first();
 
         $admin = User::firstOrCreate([

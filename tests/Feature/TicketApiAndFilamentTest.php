@@ -13,6 +13,7 @@ use App\Modules\Helpdesk\Models\TicketCategory;
 use App\Modules\Helpdesk\Models\TicketTag;
 use App\Support\Tenancy\TenantContext;
 use Database\Seeders\RoleSeeder;
+use Database\Seeders\TicketLifecycleSeeder;
 use Livewire\Livewire;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\PermissionRegistrar;
@@ -40,6 +41,8 @@ class TicketApiAndFilamentTest extends TestCase
         $contact = Contact::factory()->forCompany($company)->create();
         $category = TicketCategory::factory()->forTenant($tenant)->create();
         $tag = TicketTag::factory()->forTenant($tenant)->create();
+
+        app(TicketLifecycleSeeder::class)->runForTenant($tenant->id);
 
         $user = User::factory()->create([
             'tenant_id' => $tenant->id,
@@ -99,6 +102,8 @@ class TicketApiAndFilamentTest extends TestCase
         $contact = Contact::factory()->forCompany($company)->create();
         $category = TicketCategory::factory()->forTenant($tenant)->create();
         $tag = TicketTag::factory()->forTenant($tenant)->create();
+
+        app(TicketLifecycleSeeder::class)->runForTenant($tenant->id);
 
         $user = User::factory()->create([
             'tenant_id' => $tenant->id,

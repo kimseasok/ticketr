@@ -3,12 +3,30 @@
 namespace App\Http\Requests;
 
 use App\Modules\Helpdesk\Models\Ticket;
+use App\Support\Tenancy\TenantContext;
+use Illuminate\Validation\Rule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateTicketRequest extends FormRequest
 {
     public function rules(): array
     {
+        $tenantId = $this->resolveTenantId();
+
+        $statusRule = $tenantId
+            ? Rule::exists('ticket_statuses', 'slug')->where(fn ($query) => $query->where('tenant_id', $tenantId))
+            : Rule::in([
+                Ticket::STATUS_OPEN,
+                Ticket::STATUS_PENDING,
+                Ticket::STATUS_RESOLVED,
+                Ticket::STATUS_CLOSED,
+                Ticket::STATUS_ARCHIVED,
+            ]);
+
+        $priorityRule = $tenantId
+            ? Rule::exists('ticket_priorities', 'slug')->where(fn ($query) => $query->where('tenant_id', $tenantId))
+            : Rule::in(['low', 'normal', 'high', 'urgent']);
+
         return [
             'brand_id' => ['sometimes', 'nullable', 'integer', 'exists:brands,id'],
             'contact_id' => ['sometimes', 'nullable', 'integer', 'exists:contacts,id'],
@@ -16,14 +34,8 @@ class UpdateTicketRequest extends FormRequest
             'assigned_to' => ['sometimes', 'nullable', 'integer', 'exists:users,id'],
             'subject' => ['sometimes', 'string', 'max:255'],
             'description' => ['sometimes', 'nullable', 'string'],
-            'status' => ['sometimes', 'in:'.implode(',', [
-                Ticket::STATUS_OPEN,
-                Ticket::STATUS_PENDING,
-                Ticket::STATUS_RESOLVED,
-                Ticket::STATUS_CLOSED,
-                Ticket::STATUS_ARCHIVED,
-            ])],
-            'priority' => ['sometimes', 'in:low,normal,high,urgent'],
+            'status' => ['sometimes', $statusRule],
+            'priority' => ['sometimes', $priorityRule],
             'channel' => ['sometimes', 'in:email,web,chat,phone'],
             'reference' => ['sometimes', 'string', 'max:50'],
             'metadata' => ['sometimes', 'nullable', 'array'],
@@ -42,5 +54,16 @@ class UpdateTicketRequest extends FormRequest
     public function authorize(): bool
     {
         return true;
+    }
+
+    private function resolveTenantId(): ?int
+    {
+        $tenantId = $this->input('tenant_id');
+
+        if ($tenantId !== null) {
+            return (int) $tenantId;
+        }
+
+        return app(TenantContext::class)->getTenantId();
     }
 }
