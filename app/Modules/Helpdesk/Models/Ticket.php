@@ -6,6 +6,8 @@ use App\Models\Concerns\BelongsToTenant;
 use App\Models\User;
 use App\Modules\Helpdesk\Events\TicketStatusChanged;
 use App\Modules\Helpdesk\Models\Attachment;
+use App\Modules\Helpdesk\Models\SlaPolicy;
+use App\Modules\Helpdesk\Models\SlaTransition;
 use App\Modules\Helpdesk\Models\TicketCategory;
 use App\Modules\Helpdesk\Models\TicketMessage;
 use App\Modules\Helpdesk\Models\TicketPriority;
@@ -52,8 +54,11 @@ class Ticket extends Model
         'status',
         'priority',
         'channel',
+        'sla_policy_id',
         'reference',
         'metadata',
+        'sla_snapshot',
+        'next_sla_check_at',
         'status_changed_at',
         'first_response_due_at',
         'resolution_due_at',
@@ -68,6 +73,7 @@ class Ticket extends Model
 
     protected $casts = [
         'metadata' => 'array',
+        'sla_snapshot' => 'array',
         'status_changed_at' => 'datetime',
         'first_response_due_at' => 'datetime',
         'resolution_due_at' => 'datetime',
@@ -78,6 +84,7 @@ class Ticket extends Model
         'last_customer_reply_at' => 'datetime',
         'last_agent_reply_at' => 'datetime',
         'last_activity_at' => 'datetime',
+        'next_sla_check_at' => 'datetime',
         'deleted_at' => 'datetime',
     ];
 
@@ -152,6 +159,16 @@ class Ticket extends Model
             ->where('ticket_priorities.tenant_id', $this->tenant_id);
     }
 
+    public function slaPolicy(): BelongsTo
+    {
+        return $this->belongsTo(SlaPolicy::class);
+    }
+
+    public function slaTransitions(): HasMany
+    {
+        return $this->hasMany(SlaTransition::class);
+    }
+
     public function categories(): BelongsToMany
     {
         return $this->belongsToMany(TicketCategory::class, 'ticket_category_ticket')
@@ -208,9 +225,12 @@ class Ticket extends Model
             'closed_at',
             'archived_at',
             'last_activity_at',
+            'sla_policy_id',
+            'next_sla_check_at',
         ]);
 
         $payload['metadata'] = $this->safeMetadata();
+        $payload['sla_snapshot'] = $this->sla_snapshot;
 
         return $payload;
     }
@@ -409,9 +429,12 @@ class Ticket extends Model
         /** @var TicketSlaEvaluator $evaluator */
         $evaluator = App::make(TicketSlaEvaluator::class);
 
+        $evaluation = $evaluator->evaluate($this);
+
         $metadata = $this->metadata ?? [];
-        $metadata['sla'] = $evaluator->evaluate($this);
+        $metadata['sla'] = $evaluation;
 
         $this->metadata = $metadata;
+        $this->sla_snapshot = $evaluation;
     }
 }

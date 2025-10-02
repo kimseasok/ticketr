@@ -1,11 +1,13 @@
 <?php
 
+use App\Http\Controllers\Api\AutomationRuleController;
 use App\Http\Controllers\Api\ChannelAdapterController;
 use App\Http\Controllers\Api\ChannelIngestionController;
 use App\Http\Controllers\Api\EmailInboundMessageController;
 use App\Http\Controllers\Api\EmailMailboxController;
 use App\Http\Controllers\Api\EmailOutboundMessageController;
 use App\Http\Controllers\Api\HealthStatusController;
+use App\Http\Controllers\Api\SlaPolicyController;
 use App\Http\Controllers\Api\TicketBulkActionController;
 use App\Http\Controllers\Api\TwoFactorController;
 use App\Http\Controllers\Api\TicketController;
@@ -29,6 +31,8 @@ Route::middleware(['auth'])->group(function (): void {
 
     Route::apiResource('channel-adapters', ChannelAdapterController::class);
     Route::apiResource('ticket-macros', TicketMacroController::class);
+    Route::apiResource('automation/rules', AutomationRuleController::class);
+    Route::apiResource('automation/sla-policies', SlaPolicyController::class);
     Route::apiResource('email/mailboxes', EmailMailboxController::class);
     Route::post('/email/mailboxes/{mailbox}/sync', [EmailMailboxController::class, 'sync']);
     Route::apiResource('email/inbound-messages', EmailInboundMessageController::class)->only(['index', 'show']);

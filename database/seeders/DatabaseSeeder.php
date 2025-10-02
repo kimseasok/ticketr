@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             TicketLifecycleSeeder::class,
             MonitoringTokenSeeder::class,
             ChannelAdapterMacroSeeder::class,
+            AutomationSeeder::class,
             DemoDataSeeder::class,
         ]);
     }

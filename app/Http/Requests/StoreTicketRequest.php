@@ -43,6 +43,7 @@ class StoreTicketRequest extends FormRequest
             'channel' => ['nullable', 'in:email,web,chat,phone'],
             'reference' => ['nullable', 'string', 'max:50'],
             'metadata' => ['nullable', 'array'],
+            'sla_policy_id' => ['nullable', 'integer', 'exists:sla_policies,id'],
             'first_response_due_at' => ['nullable', 'date'],
             'resolution_due_at' => ['nullable', 'date'],
             'category_ids' => ['sometimes', 'array'],

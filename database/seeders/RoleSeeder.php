@@ -32,6 +32,10 @@ class RoleSeeder extends Seeder
             'email-pipeline.deliver',
             'email-pipeline.sync',
             'email-messages.view',
+            'automation-rules.manage',
+            'automation-rules.view',
+            'sla-policies.manage',
+            'sla-policies.view',
         ];
 
         foreach ($permissions as $permission) {
@@ -72,6 +76,10 @@ class RoleSeeder extends Seeder
             'ticket-macros.view',
             'email-pipeline.deliver',
             'email-messages.view',
+            'automation-rules.manage',
+            'automation-rules.view',
+            'sla-policies.manage',
+            'sla-policies.view',
         ]);
         $viewer->syncPermissions([
             'tickets.view',
@@ -81,6 +89,7 @@ class RoleSeeder extends Seeder
             'channel-adapters.view',
             'ticket-macros.view',
             'email-messages.view',
+            'sla-policies.view',
         ]);
     }
 }

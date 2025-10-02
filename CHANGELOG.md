@@ -24,6 +24,7 @@
 - Email mailbox, inbound/outbound message, and attachment storage with tenant/brand scopes and factories. (#116)
 - IMAP ingestion and SMTP delivery services with structured logging, attachment linking, and OpenAPI coverage. (#117)
 - Email pipeline RBAC, policies, API + Filament resources, and viewer-safe message listings. (#118)
+- Automation rule & SLA orchestration stack with migrations, rule engine services, Filament resources, monitoring job, and OpenAPI/README coverage. (#102, #103, #106)
 
 ### Changed
 - Ticket policy now honours Spatie permissions (`tickets.view`, `tickets.manage`).
@@ -32,6 +33,7 @@
 - Role seeding grants granular `ticket-messages.*` permissions across Admin/Agent/Viewer roles. (#24)
 - Role seeding now provisions `tickets.assign`, `tickets.watchers.manage`, `channel-adapters.*`, and `ticket-macros.*` permissions mapped to Admin/Agent/Viewer roles. (#20, #25)
 - Ticket API responses expose watcher collections alongside SLA snapshots; README + OpenAPI document the optional `watcher_ids` payloads. (#20)
+- Ticket create/update flows accept SLA policy assignment, emit automation evaluations, and trigger SLA monitoring jobs. (#102, #103, #106)
 
 ### Security
 - Tenant and brand headers are required to resolve scoped queries, preventing cross-tenant leakage.
@@ -42,3 +44,4 @@
 - TOTP enrollment/confirmation routes honour tenant policies, redact secrets in audit logs, and enforce IP allowlists. (#11)
 - Watcher synchronisation enforces tenant/brand membership and records `ticket.watchers.synced` audit entries with structured logs. (#20)
 - Role seeding now provisions email pipeline permissions for Admin/Agent/Viewer roles and policies gate delivery/sync actions. (#118)
+- Automation and SLA policies enforce Spatie permission checks for Admin/Agent/Viewer roles across API + Filament. (#103)

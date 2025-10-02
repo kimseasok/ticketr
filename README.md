@@ -35,6 +35,7 @@ Ticketr is a multi-tenant helpdesk platform built on Laravel 12 and Filament 3. 
    php artisan db:seed --class=TenantSeeder
    php artisan tickets:seed-defaults
    php artisan db:seed --class=ChannelAdapterMacroSeeder
+   php artisan db:seed --class=AutomationSeeder
    php artisan db:seed --class=DemoDataSeeder
    ```
    Use `php artisan tickets:seed-defaults {tenantSlugOrId}` to reseed lifecycle defaults for a specific tenant without touching others. `ChannelAdapterMacroSeeder` can also be run independently to refresh seeded adapters/macros for new tenants.
@@ -159,6 +160,9 @@ php artisan test --filter Issue-12
 php artisan test --filter TKT-EMAIL-DB-01
 php artisan test --filter TKT-EMAIL-MD-02
 php artisan test --filter TKT-EMAIL-RB-03
+php artisan test --filter TKT-AUT-DB-01
+php artisan test --filter TKT-AUT-MD-02
+php artisan test --filter TKT-AUT-OB-05
 ```
 
 Running `php artisan test` executes the full suite, including API, policy, and Filament coverage.
@@ -177,3 +181,15 @@ New environment keys:
 ## Change management
 
 Refer to [`CHANGELOG.md`](CHANGELOG.md) for a concise list of additions and behavioral changes made in this phase.
+- `GET /api/automation/rules` / `POST /api/automation/rules`
+- `GET /api/automation/rules/{id}` / `PUT /api/automation/rules/{id}` / `DELETE /api/automation/rules/{id}`
+- `GET /api/automation/sla-policies` / `POST /api/automation/sla-policies`
+- `GET /api/automation/sla-policies/{id}` / `PUT /api/automation/sla-policies/{id}` / `DELETE /api/automation/sla-policies/{id}`
+
+Rules support conditional logic across ticket fields (`priority`, `status`, `channel`, brand, or SLA) and can execute actions like setting priority/status, assigning agents, applying SLA policies, or tagging tickets. SLA policies configure response/resolution targets with grace windows and breach alert thresholds. Both resources ship with Filament CRUD pages under **Automation**.
+
+### Automation rules & SLA monitors
+
+- Automation runs automatically when tickets are created or updated; matching rules log executions and update watchers via structured JSON logs.
+- SLA policies drive due dates, stored snapshots, and background monitoring via the `ProcessTicketSla` job. Breaches create entries in the `sla_transitions` table and emit `sla.alert.triggered` structured logs when violations persist beyond the configured alert window.
+- Seeded defaults include a "Default Response SLA" and an "Auto-assign High Priority" rule for the demo tenant.
