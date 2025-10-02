@@ -28,6 +28,9 @@ class TicketResource extends JsonResource
             'channel' => $this->channel,
             'reference' => $this->reference,
             'metadata' => $this->metadata,
+            'sla_policy_id' => $this->sla_policy_id,
+            'sla_snapshot' => $this->sla_snapshot,
+            'next_sla_check_at' => optional($this->next_sla_check_at)->toIso8601String(),
             'status_changed_at' => optional($this->status_changed_at)->toIso8601String(),
             'first_response_due_at' => optional($this->first_response_due_at)->toIso8601String(),
             'resolution_due_at' => optional($this->resolution_due_at)->toIso8601String(),
@@ -45,6 +48,7 @@ class TicketResource extends JsonResource
             'tags' => TicketTagResource::collection($this->whenLoaded('tags')),
             'status_definition' => new TicketStatusResource($this->whenLoaded('statusDefinition')),
             'priority_definition' => new TicketPriorityResource($this->whenLoaded('priorityDefinition')),
+            'sla_policy' => new SlaPolicyResource($this->whenLoaded('slaPolicy')),
             'watchers' => $this->whenLoaded('watcherParticipants', function () {
                 return $this->watcherParticipants->map(function ($participant) {
                     return [

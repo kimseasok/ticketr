@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreTicketRequest;
 use App\Http\Requests\UpdateTicketRequest;
 use App\Http\Resources\TicketResource;
+use App\Modules\Helpdesk\Models\SlaPolicy;
 use App\Modules\Helpdesk\Models\Ticket;
+use App\Modules\Helpdesk\Services\SlaPolicyService;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -62,6 +64,7 @@ class TicketController extends Controller
         $this->enforceScope($payload);
 
         $ticket = Ticket::create($payload);
+        $this->applySlaPolicy($ticket, $payload['sla_policy_id'] ?? null);
 
         $this->syncTaxonomy($ticket, $payload);
 
@@ -101,6 +104,7 @@ class TicketController extends Controller
         }
 
         $ticket->update($payload);
+        $this->applySlaPolicy($ticket, $payload['sla_policy_id'] ?? null);
 
         $this->syncTaxonomy($ticket, $payload);
 
@@ -180,5 +184,26 @@ class TicketController extends Controller
         if ($brandId !== null && $ticket->brand_id !== null && $ticket->brand_id !== $brandId) {
             abort(404);
         }
+    }
+
+    private function applySlaPolicy(Ticket $ticket, $policyId): void
+    {
+        /** @var SlaPolicyService $service */
+        $service = app(SlaPolicyService::class);
+
+        $policy = null;
+        if ($policyId) {
+            $policy = SlaPolicy::query()
+                ->where('tenant_id', $ticket->tenant_id)
+                ->find((int) $policyId);
+        }
+
+        if ($policyId !== null) {
+            $service->assignPolicy($ticket, $policy);
+        } else {
+            $service->refreshTicket($ticket);
+        }
+
+        $ticket->save();
     }
 }

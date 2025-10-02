@@ -437,6 +437,207 @@ paths:
       responses:
         '204':
           description: Ticket macro deleted
+  /api/automation/rules:
+    get:
+      summary: List automation rules
+      tags: [Automation]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+      responses:
+        '200':
+          description: Paginated automation rule list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomationRuleCollection'
+    post:
+      summary: Create an automation rule
+      tags: [Automation]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AutomationRuleRequest'
+            examples:
+              create-rule:
+                value:
+                  name: Auto escalate email VIPs
+                  slug: auto-escalate-vip
+                  event: ticket.created
+                  match_type: all
+                  conditions:
+                    - field: channel
+                      operator: equals
+                      value: email
+                  actions:
+                    - type: set_priority
+                      value: urgent
+                    - type: apply_sla
+                      sla_policy_id: 1
+      responses:
+        '201':
+          description: Automation rule created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomationRuleResponse'
+  /api/automation/rules/{automation_rule}:
+    get:
+      summary: Show an automation rule
+      tags: [Automation]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+        - $ref: '#/components/parameters/AutomationRuleId'
+      responses:
+        '200':
+          description: Automation rule details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomationRuleResponse'
+    put:
+      summary: Update an automation rule
+      tags: [Automation]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+        - $ref: '#/components/parameters/AutomationRuleId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AutomationRuleRequest'
+      responses:
+        '200':
+          description: Automation rule updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomationRuleResponse'
+    delete:
+      summary: Delete an automation rule
+      tags: [Automation]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+        - $ref: '#/components/parameters/AutomationRuleId'
+      responses:
+        '204':
+          description: Automation rule deleted
+  /api/automation/sla-policies:
+    get:
+      summary: List SLA policies
+      tags: [Automation]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+      responses:
+        '200':
+          description: Paginated SLA policy list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlaPolicyCollection'
+    post:
+      summary: Create an SLA policy
+      tags: [Automation]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SlaPolicyRequest'
+            examples:
+              create-sla:
+                value:
+                  name: VIP Response
+                  slug: vip-response
+                  first_response_minutes: 60
+                  resolution_minutes: 240
+                  grace_minutes: 15
+                  alert_after_minutes: 30
+      responses:
+        '201':
+          description: SLA policy created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlaPolicyResponse'
+  /api/automation/sla-policies/{sla_policy}:
+    get:
+      summary: Show an SLA policy
+      tags: [Automation]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+        - $ref: '#/components/parameters/SlaPolicyId'
+      responses:
+        '200':
+          description: SLA policy details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlaPolicyResponse'
+    put:
+      summary: Update an SLA policy
+      tags: [Automation]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+        - $ref: '#/components/parameters/SlaPolicyId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SlaPolicyRequest'
+      responses:
+        '200':
+          description: SLA policy updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlaPolicyResponse'
+    delete:
+      summary: Delete an SLA policy
+      tags: [Automation]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/BrandHeader'
+        - $ref: '#/components/parameters/SlaPolicyId'
+      responses:
+        '204':
+          description: SLA policy deleted
   /api/email/mailboxes:
     get:
       summary: List email mailboxes
@@ -815,6 +1016,18 @@ components:
       required: true
       schema:
         type: integer
+    AutomationRuleId:
+      name: automation_rule
+      in: path
+      required: true
+      schema:
+        type: integer
+    SlaPolicyId:
+      name: sla_policy
+      in: path
+      required: true
+      schema:
+        type: integer
   schemas:
     TicketCollection:
       type: object
@@ -1155,6 +1368,242 @@ components:
                     type: array
                     items:
                       type: string
+    AutomationRuleCollection:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AutomationRule'
+        links:
+          type: object
+        meta:
+          type: object
+    AutomationRuleResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/AutomationRule'
+    AutomationRuleRequest:
+      type: object
+      required: [name, event, match_type, actions]
+      properties:
+        name:
+          type: string
+          maxLength: 150
+        slug:
+          type: string
+          maxLength: 150
+        event:
+          type: string
+          enum: [ticket.created, ticket.updated, sla.breached]
+        match_type:
+          type: string
+          enum: [all, any]
+        is_active:
+          type: boolean
+        run_order:
+          type: integer
+          minimum: 0
+        brand_id:
+          type: integer
+          nullable: true
+        conditions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AutomationRuleCondition'
+        actions:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/AutomationRuleAction'
+    AutomationRule:
+      type: object
+      properties:
+        id:
+          type: integer
+        tenant_id:
+          type: integer
+        brand_id:
+          type: integer
+          nullable: true
+        name:
+          type: string
+        slug:
+          type: string
+        event:
+          type: string
+        match_type:
+          type: string
+        conditions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AutomationRuleCondition'
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AutomationRuleAction'
+        is_active:
+          type: boolean
+        run_order:
+          type: integer
+        last_run_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    AutomationRuleCondition:
+      type: object
+      required: [field, operator, value]
+      properties:
+        field:
+          type: string
+          enum: [priority, status, channel, brand_id, sla_policy_id]
+        operator:
+          type: string
+          enum: [equals, not_equals, in, not_in, contains]
+        value:
+          description: Value compared against the ticket attribute for the condition.
+          anyOf:
+            - type: string
+            - type: number
+            - type: integer
+            - type: boolean
+            - type: array
+              items:
+                anyOf:
+                  - type: string
+                  - type: number
+                  - type: integer
+                  - type: boolean
+    AutomationRuleAction:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [set_priority, set_status, assign_agent, apply_sla, add_tags]
+        value:
+          description: Optional value for status/priority actions.
+          nullable: true
+          type: string
+        user_id:
+          type: integer
+          nullable: true
+        sla_policy_id:
+          type: integer
+          nullable: true
+        tag_ids:
+          type: array
+          items:
+            type: integer
+    SlaPolicyCollection:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SlaPolicy'
+        links:
+          type: object
+        meta:
+          type: object
+    SlaPolicyResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/SlaPolicy'
+    SlaPolicyRequest:
+      type: object
+      required: [name, first_response_minutes, resolution_minutes]
+      properties:
+        name:
+          type: string
+          maxLength: 150
+        slug:
+          type: string
+          maxLength: 150
+        description:
+          type: string
+          nullable: true
+        priority_scope:
+          type: string
+          enum: [low, normal, high, urgent]
+          nullable: true
+        channel_scope:
+          type: string
+          enum: [email, web, chat, phone]
+          nullable: true
+        first_response_minutes:
+          type: integer
+          minimum: 5
+        resolution_minutes:
+          type: integer
+          minimum: 5
+        grace_minutes:
+          type: integer
+          minimum: 0
+          nullable: true
+        alert_after_minutes:
+          type: integer
+          minimum: 5
+          nullable: true
+        is_active:
+          type: boolean
+        escalation_user_id:
+          type: integer
+          nullable: true
+        brand_id:
+          type: integer
+          nullable: true
+    SlaPolicy:
+      type: object
+      properties:
+        id:
+          type: integer
+        tenant_id:
+          type: integer
+        brand_id:
+          type: integer
+          nullable: true
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+          nullable: true
+        priority_scope:
+          type: string
+          nullable: true
+        channel_scope:
+          type: string
+          nullable: true
+        first_response_minutes:
+          type: integer
+        resolution_minutes:
+          type: integer
+        grace_minutes:
+          type: integer
+          nullable: true
+        alert_after_minutes:
+          type: integer
+        is_active:
+          type: boolean
+        escalation_user_id:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
     MessageResponse:
       type: object
       properties:
@@ -1363,6 +1812,9 @@ components:
         metadata:
           type: object
           additionalProperties: true
+        sla_policy_id:
+          type: integer
+          nullable: true
         assigned_to:
           type: integer
         watcher_ids:
@@ -1410,6 +1862,15 @@ components:
         metadata:
           type: object
           additionalProperties: true
+        sla_policy_id:
+          type: integer
+          nullable: true
+        sla_snapshot:
+          type: object
+          additionalProperties: true
+        next_sla_check_at:
+          type: string
+          format: date-time
         status_definition:
           $ref: '#/components/schemas/TicketStatus'
         priority_definition:

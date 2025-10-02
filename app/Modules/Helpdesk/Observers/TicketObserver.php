@@ -2,8 +2,10 @@
 
 namespace App\Modules\Helpdesk\Observers;
 
+use App\Jobs\ProcessTicketSla;
 use App\Modules\Helpdesk\Models\AuditLog;
 use App\Modules\Helpdesk\Models\Ticket;
+use App\Modules\Helpdesk\Services\AutomationRuleEngine;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
 
@@ -12,21 +14,34 @@ class TicketObserver
     public function created(Ticket $ticket): void
     {
         $this->recordAudit($ticket, 'created', [], $ticket->auditPayload());
+
+        app(AutomationRuleEngine::class)->evaluate($ticket, 'ticket.created');
+
+        ProcessTicketSla::dispatch($ticket->id);
     }
 
     public function updated(Ticket $ticket): void
     {
         $changes = Arr::only($ticket->getChanges(), array_keys($ticket->auditPayload()));
-        if ($changes === []) {
-            return;
+
+        if ($changes !== []) {
+            $this->recordAudit(
+                $ticket,
+                'updated',
+                $this->sanitizeValues(Arr::only($ticket->getOriginal(), array_keys($changes))),
+                $this->sanitizeValues(Arr::only($ticket->getAttributes(), array_keys($changes)))
+            );
         }
 
-        $this->recordAudit(
-            $ticket,
-            'updated',
-            $this->sanitizeValues(Arr::only($ticket->getOriginal(), array_keys($changes))),
-            $this->sanitizeValues(Arr::only($ticket->getAttributes(), array_keys($changes)))
-        );
+        $engine = app(AutomationRuleEngine::class);
+        if (! $engine->isProcessing($ticket->id)) {
+            $engine->evaluate($ticket, 'ticket.updated');
+        }
+
+        $slaFields = ['sla_policy_id', 'first_response_due_at', 'resolution_due_at', 'sla_snapshot'];
+        if (array_intersect($slaFields, array_keys($ticket->getChanges())) !== []) {
+            ProcessTicketSla::dispatch($ticket->id);
+        }
     }
 
     public function deleted(Ticket $ticket): void

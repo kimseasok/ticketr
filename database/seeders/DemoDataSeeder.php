@@ -10,11 +10,13 @@ use App\Modules\Helpdesk\Models\EmailMailbox;
 use App\Modules\Helpdesk\Models\EmailOutboundMessage;
 use App\Modules\Helpdesk\Models\KnowledgeBaseArticle;
 use App\Modules\Helpdesk\Models\KnowledgeBaseCategory;
+use App\Modules\Helpdesk\Models\SlaPolicy;
 use App\Modules\Helpdesk\Models\Tenant;
 use App\Modules\Helpdesk\Models\Ticket;
 use App\Modules\Helpdesk\Models\TicketCategory;
 use App\Modules\Helpdesk\Models\TicketTag;
 use App\Modules\Helpdesk\Services\TicketMessageService;
+use App\Modules\Helpdesk\Services\SlaPolicyService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -147,6 +149,13 @@ class DemoDataSeeder extends Seeder
             'status_changed_at' => now(),
             'last_activity_at' => now(),
         ]);
+
+        if ($policy = SlaPolicy::where('tenant_id', $tenant->id)->where('slug', 'default-response')->first()) {
+            /** @var SlaPolicyService $slaService */
+            $slaService = app(SlaPolicyService::class);
+            $slaService->assignPolicy($ticket, $policy);
+            $ticket->save();
+        }
 
         $supportCategory = TicketCategory::firstOrCreate([
             'tenant_id' => $tenant->id,

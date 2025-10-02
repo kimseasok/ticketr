@@ -41,6 +41,7 @@ class UpdateTicketRequest extends FormRequest
             'channel' => ['sometimes', 'in:email,web,chat,phone'],
             'reference' => ['sometimes', 'string', 'max:50'],
             'metadata' => ['sometimes', 'nullable', 'array'],
+            'sla_policy_id' => ['sometimes', 'nullable', 'integer', 'exists:sla_policies,id'],
             'first_response_due_at' => ['sometimes', 'nullable', 'date'],
             'resolution_due_at' => ['sometimes', 'nullable', 'date'],
             'first_responded_at' => ['sometimes', 'nullable', 'date'],
